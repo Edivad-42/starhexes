@@ -39,6 +39,7 @@
         const StarHexesGame = () => {
           const [config, setConfig] = useState(null);
           const [units, setUnits] = useState([]);
+          const [capitalShips, setCapitalShips] = useState({ player1: null, player2: null });
           const [currentPlayer, setCurrentPlayer] = useState(1);
           const [selectedUnit, setSelectedUnit] = useState(null);
           const [activatedUnits, setActivatedUnits] = useState(new Set());
@@ -59,6 +60,19 @@
               .then(res => res.json())
               .then(data => {
                 setConfig(data);
+                
+                // Inizializza navi capitali
+                setCapitalShips({
+                  player1: {
+                    ...data.capitalShips.player1,
+                    currentHealth: data.capitalShips.player1.health
+                  },
+                  player2: {
+                    ...data.capitalShips.player2,
+                    currentHealth: data.capitalShips.player2.health
+                  }
+                });
+                
                 const initialUnits = [];
                 let unitId = 1;
                 
@@ -292,6 +306,7 @@
             setGamePhase('combat');
             const log = [];
             const currentUnits = [...unitsRef.current];
+            let newCapitalShips = { ...capitalShips };
 
             const combatPairs = new Map();
             
@@ -327,12 +342,13 @@
               }
             });
 
+            // Danni alle navi capitali
             newUnits.forEach(unit => {
               if (unit.health <= 0) return;
               
-              const isInEnemyCapitalZone = unit.player === 1 
-                ? config.capitalZones.player2.includes(unit.q)
-                : config.capitalZones.player1.includes(unit.q);
+              const isInP1CapitalZone = config.capitalZones.player1.some(z => z.q === unit.q && z.r === unit.r);
+              const isInP2CapitalZone = config.capitalZones.player2.some(z => z.q === unit.q && z.r === unit.r);
+              const isInEnemyCapitalZone = unit.player === 1 ? isInP2CapitalZone : isInP1CapitalZone;
               
               if (isInEnemyCapitalZone) {
                 const hasEnemyNeighbors = hexUtils.getNeighbors(unit.q, unit.r)
@@ -342,12 +358,18 @@
                   });
                 
                 if (!hasEnemyNeighbors) {
-                  log.push(`${unit.id} infligge ${unit.capitalDamage} danni alla nave capitale nemica!`);
+                  const targetShip = unit.player === 1 ? 'player2' : 'player1';
+                  newCapitalShips[targetShip] = {
+                    ...newCapitalShips[targetShip],
+                    currentHealth: Math.max(0, newCapitalShips[targetShip].currentHealth - unit.capitalDamage)
+                  };
+                  log.push(`${unit.id} infligge ${unit.capitalDamage} danni alla ${newCapitalShips[targetShip].name}!`);
                 }
               }
             });
 
             setUnits(newUnits);
+            setCapitalShips(newCapitalShips);
             setCombatLog(log);
             
             setTimeout(() => {
@@ -365,10 +387,25 @@
             const hexHeight = hexSize * 2;
             const vertDist = hexHeight * 0.75;
             
+            const ship1Pos = config.capitalShips.player1.position;
+            const ship2Pos = config.capitalShips.player2.position;
+            const disabledHexes = config.map.disabledHexes || [];
+            
+            const isHexDisabled = (q, r) => {
+              return disabledHexes.some(hex => hex.q === q && hex.r === r);
+            };
+            
+            const isInCapitalZone = (q, r, player) => {
+              const zones = player === 1 ? config.capitalZones.player1 : config.capitalZones.player2;
+              return zones.some(zone => zone.q === q && zone.r === r);
+            };
+            
             return (
-              <svg width="100%" height="100%" className="bg-gray-900" viewBox="0 0 550 350" preserveAspectRatio="xMidYMid meet">
+              <svg width="100%" height="100%" className="bg-gray-900" viewBox="0 0 550 380" preserveAspectRatio="xMidYMid meet">
                 {Array.from({ length: config.map.height }, (_, r) => 
                   Array.from({ length: config.map.width }, (_, q) => {
+                    if (isHexDisabled(q, r)) return null;
+                    
                     const x = hexWidth * q + (r % 2) * (hexWidth / 2) + 40;
                     const y = vertDist * r + 35;
                     
@@ -377,8 +414,10 @@
                     const validMoves = selectedUnit ? getValidMoves(selectedUnit) : [];
                     const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
                     
-                    const isP1Capital = config.capitalZones.player1.includes(q);
-                    const isP2Capital = config.capitalZones.player2.includes(q);
+                    const isP1Capital = isInCapitalZone(q, r, 1);
+                    const isP2Capital = isInCapitalZone(q, r, 2);
+                    const isShip1 = q === ship1Pos.q && r === ship1Pos.r;
+                    const isShip2 = q === ship2Pos.q && r === ship2Pos.r;
                     
                     let fillColor = '#1e293b';
                     let strokeColor = '#475569';
@@ -405,6 +444,22 @@
                           onClick={() => unit ? handleUnitClick(unit) : handleHexClick(q, r)}
                           className="cursor-pointer hover:opacity-80 transition-opacity"
                         />
+                        
+                        {/* Navi Capitali */}
+                        {isShip1 && capitalShips.player1.currentHealth > 0 && (
+                          <>
+                            <rect x={x-22} y={y-10} width={44} height={20} rx={4} fill="#1e40af" stroke="#3b82f6" strokeWidth={2} />
+                            <text x={x} y={y+4} textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">NAVE</text>
+                          </>
+                        )}
+                        {isShip2 && capitalShips.player2.currentHealth > 0 && (
+                          <>
+                            <rect x={x-22} y={y-10} width={44} height={20} rx={4} fill="#991b1b" stroke="#ef4444" strokeWidth={2} />
+                            <text x={x} y={y+4} textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">NAVE</text>
+                          </>
+                        )}
+                        
+                        {/* Unità */}
                         {unit && unit.health > 0 && (
                           <>
                             <circle
@@ -475,12 +530,34 @@
                 
                 <div className="grid grid-cols-2 gap-1 p-1 bg-gray-900 text-xs flex-shrink-0">
                   <div className="bg-blue-900 p-1 rounded">
-                    <span className="text-blue-300 font-bold">P1:</span>
-                    <span className="text-white ml-1">{units.filter(u => u.player === 1 && u.health > 0).length}</span>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-blue-300 font-bold">P1</span>
+                      <span className="text-white">{units.filter(u => u.player === 1 && u.health > 0).length} unità</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="flex-1 bg-gray-700 rounded h-2 overflow-hidden">
+                        <div 
+                          className="bg-blue-400 h-full transition-all"
+                          style={{ width: `${(capitalShips.player1?.currentHealth / capitalShips.player1?.health * 100) || 0}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-white text-[10px]">{capitalShips.player1?.currentHealth || 0}</span>
+                    </div>
                   </div>
                   <div className="bg-red-900 p-1 rounded">
-                    <span className="text-red-300 font-bold">P2:</span>
-                    <span className="text-white ml-1">{units.filter(u => u.player === 2 && u.health > 0).length}</span>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-red-300 font-bold">P2</span>
+                      <span className="text-white">{units.filter(u => u.player === 2 && u.health > 0).length} unità</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="flex-1 bg-gray-700 rounded h-2 overflow-hidden">
+                        <div 
+                          className="bg-red-400 h-full transition-all"
+                          style={{ width: `${(capitalShips.player2?.currentHealth / capitalShips.player2?.health * 100) || 0}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-white text-[10px]">{capitalShips.player2?.currentHealth || 0}</span>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -1,138 +1,131 @@
 {
-    "map": {
-        "width": 9,
-        "height": 7,
-        "hexSize": 28
+  "map": {
+    "width": 9,
+    "height": 8,
+    "hexSize": 28,
+    "disabledHexes": [
+      { "q": 0, "r": 0 },
+      { "q": 8, "r": 7 }
+    ]
+  },
+  "capitalShips": {
+    "player1": {
+      "name": "Nave Comando Ribelle",
+      "health": 100,
+      "type": "cruiser",
+      "position": { "q": 0, "r": 1 }
     },
-    "capitalZones": {
-        "player1": [
-            0,
-            1,
-            2
-        ],
-        "player2": [
-            6,
-            7,
-            8
-        ]
-    },
-    "combat": {
-        "baseDamage": 30,
-        "capitalDamage": 20
-    },
-    "unitTypes": {
-        "xWing": {
-            "name": "X-Wing",
-            "health": 100,
-            "damage": 30,
-            "capitalDamage": 20,
-            "icon": "icons/starfighters/tieInterceptor.png",
-            "descsription": "An all-round fighter",
-            "color": {
-                "player1": "#3b82f6",
-                "player2": "#ef4444"
-            }
-        },
-        "aWing": {
-            "name": "A-Wing",
-            "health": 60,
-            "damage": 35,
-            "capitalDamage": 10,
-            "icon": "icons/starfighters/tieInterceptor.png",
-            "descsription": "A fragile interceptor",
-            "color": {
-                "player1": "#10b981",
-                "player2": "#f59e0b"
-            }
-        },
-        "yWing": {
-            "name": "Y-Wing",
-            "health": 120,
-            "damage": 20,
-            "capitalDamage": 30,
-            "icon": "icons/starfighters/tieInterceptor.png",
-            "descsription": "A resistent bomber",
-            "color": {
-                "player1": "#8b5cf6",
-                "player2": "#ec4899"
-            }
-        },
-        "tieF": {
-            "name": "TIE Fighter",
-            "health": 60,
-            "damage": 20,
-            "capitalDamage": 10,
-            "icon": "icons/starfighters/tieInterceptor.png",
-            "descsription": "A fragile fighter",
-            "color": {
-                "player1": "#3b82f6",
-                "player2": "#ef4444"
-            }
-        },
-        "tieI": {
-            "name": "TIE Interceptor",
-            "health": 60,
-            "damage": 35,
-            "capitalDamage": 10,
-            "icon": "icons/starfighters/tieInterceptor.png",
-            "descsription": "A fragile interceptor",
-            "color": {
-                "player1": "#10b981",
-                "player2": "#f59e0b"
-            }
-        },
-        "tieB": {
-            "name": "TIE Bomber",
-            "health": 90,
-            "damage": 15,
-            "capitalDamage": 25,
-            "icon": "icons/starfighters/tieInterceptor.png",
-            "descsription": "An average bomber",
-            "color": {
-                "player1": "#8b5cf6",
-                "player2": "#ec4899"
-            }
-        }
-    },
-    "startingUnits": {
-        "player1": [
-            {
-                "type": "xWing",
-                "q": 1,
-                "r": 2
-            },
-            {
-                "type": "aWing",
-                "q": 1,
-                "r": 3
-            },
-            {
-                "type": "yWing",
-                "q": 1,
-                "r": 4
-            }
-        ],
-        "player2": [
-            {
-                "type": "tieF",
-                "q": 7,
-                "r": 2
-            },
-            {
-                "type": "tieI",
-                "q": 7,
-                "r": 3
-            },
-            {
-                "type": "tieB",
-                "q": 7,
-                "r": 4
-            }
-        ]
-    },
-    "ui": {
-        "showHealthNumbers": true,
-        "animationSpeed": 1000,
-        "combatLogDuration": 3000
+    "player2": {
+      "name": "Nave Comando Imperiale",
+      "health": 100,
+      "type": "cruiser",
+      "position": { "q": 8, "r": 6 }
     }
+  },
+  "capitalZones": {
+    "player1": [
+      { "q": 1, "r": 0 },
+      { "q": 0, "r": 1 },
+      { "q": 0, "r": 2 }
+    ],
+    "player2": [
+      { "q": 8, "r": 5 },
+      { "q": 8, "r": 6 },
+      { "q": 7, "r": 7 }
+    ]
+  },
+  "combat": {
+    "defaultCapitalDamage": 20
+  },
+  "unitTypes": {
+    "xWing": {
+      "name": "X-Wing",
+      "health": 100,
+      "damage": 30,
+      "capitalDamage": 20,
+      "icon": "icons/starfighters/tieInterceptor.png",
+      "description": "An all-round fighter",
+      "color": {
+        "player1": "#3b82f6",
+        "player2": "#ef4444"
+      }
+    },
+    "aWing": {
+      "name": "A-Wing",
+      "health": 60,
+      "damage": 35,
+      "capitalDamage": 10,
+      "icon": "icons/starfighters/tieInterceptor.png",
+      "description": "A fragile interceptor",
+      "color": {
+        "player1": "#10b981",
+        "player2": "#f59e0b"
+      }
+    },
+    "yWing": {
+      "name": "Y-Wing",
+      "health": 120,
+      "damage": 20,
+      "capitalDamage": 30,
+      "icon": "icons/starfighters/tieInterceptor.png",
+      "description": "A resistant bomber",
+      "color": {
+        "player1": "#8b5cf6",
+        "player2": "#ec4899"
+      }
+    },
+    "tieF": {
+      "name": "TIE Fighter",
+      "health": 60,
+      "damage": 20,
+      "capitalDamage": 10,
+      "icon": "icons/starfighters/tieInterceptor.png",
+      "description": "A fragile fighter",
+      "color": {
+        "player1": "#3b82f6",
+        "player2": "#ef4444"
+      }
+    },
+    "tieI": {
+      "name": "TIE Interceptor",
+      "health": 60,
+      "damage": 35,
+      "capitalDamage": 10,
+      "icon": "icons/starfighters/tieInterceptor.png",
+      "description": "A fragile interceptor",
+      "color": {
+        "player1": "#10b981",
+        "player2": "#f59e0b"
+      }
+    },
+    "tieB": {
+      "name": "TIE Bomber",
+      "health": 90,
+      "damage": 15,
+      "capitalDamage": 25,
+      "icon": "icons/starfighters/tieInterceptor.png",
+      "description": "An average bomber",
+      "color": {
+        "player1": "#8b5cf6",
+        "player2": "#ec4899"
+      }
+    }
+  },
+  "startingUnits": {
+    "player1": [
+      { "type": "xWing", "q": 2, "r": 2 },
+      { "type": "aWing", "q": 2, "r": 3 },
+      { "type": "yWing", "q": 2, "r": 4 }
+    ],
+    "player2": [
+      { "type": "tieF", "q": 6, "r": 3 },
+      { "type": "tieI", "q": 6, "r": 4 },
+      { "type": "tieB", "q": 6, "r": 5 }
+    ]
+  },
+  "ui": {
+    "showHealthNumbers": true,
+    "animationSpeed": 1000,
+    "combatLogDuration": 3000
+  }
 }
