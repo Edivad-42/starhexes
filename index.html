@@ -361,7 +361,7 @@
                   const targetShip = unit.player === 1 ? 'player2' : 'player1';
                   newCapitalShips[targetShip] = {
                     ...newCapitalShips[targetShip],
-                    currentHealth: Math.max(0, newCapitalShips[targetShip].currentHealth - unit.capitalDamage)
+                    currentHealth: Math.max(0, newCapitalShips[targetShip]?.currentHealth - unit.capitalDamage)
                   };
                   log.push(`${unit.id} infligge ${unit.capitalDamage} danni alla ${newCapitalShips[targetShip].name}!`);
                 }
@@ -446,13 +446,13 @@
                         />
                         
                         {/* Navi Capitali */}
-                        {isShip1 && capitalShips.player1.currentHealth > 0 && (
+                        {isShip1 && capitalShips?.player1?.currentHealth > 0 && (
                           <>
                             <rect x={x-22} y={y-10} width={44} height={20} rx={4} fill="#1e40af" stroke="#3b82f6" strokeWidth={2} />
                             <text x={x} y={y+4} textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">NAVE</text>
                           </>
                         )}
-                        {isShip2 && capitalShips.player2.currentHealth > 0 && (
+                        {isShip2 && capitalShips?.player2?.currentHealth > 0 && (
                           <>
                             <rect x={x-22} y={y-10} width={44} height={20} rx={4} fill="#991b1b" stroke="#ef4444" strokeWidth={2} />
                             <text x={x} y={y+4} textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">NAVE</text>
