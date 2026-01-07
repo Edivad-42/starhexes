@@ -402,6 +402,14 @@
             
             return (
               <svg width="100%" height="100%" className="bg-gray-900" viewBox="0 0 550 380" preserveAspectRatio="xMidYMid meet">
+                
+                <text x="10" y="120" fill="#3b82f6" fontSize="12" fontWeight="bold">
+                  {config.capitalShips.player1.name}
+                </text>
+                <text x="480" y="280" fill="#ef4444" fontSize="12" fontWeight="bold" textAnchor="end">
+                  {config.capitalShips.player2.name}
+                </text>
+
                 {Array.from({ length: config.map.height }, (_, r) => 
                   Array.from({ length: config.map.width }, (_, q) => {
                     if (isHexDisabled(q, r)) return null;
@@ -424,10 +432,12 @@
                     let strokeWidth = 2;
                     
                     if (isP1Capital) {
+                      fillColor = '#1e3a5f';
                       strokeColor = '#3b82f6';
                       strokeWidth = 3;
                     }
                     if (isP2Capital) {
+                      fillColor = '#4a1a1a'; 
                       strokeColor = '#ef4444';
                       strokeWidth = 3;
                     }
@@ -446,16 +456,14 @@
                         />
                         
                         {/* Navi Capitali */}
-                        {isShip1 && capitalShips?.player1?.currentHealth > 0 && (
+                        {(isShip1 || isShip2) && (
                           <>
-                            <rect x={x-22} y={y-10} width={44} height={20} rx={4} fill="#1e40af" stroke="#3b82f6" strokeWidth={2} />
-                            <text x={x} y={y+4} textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">NAVE</text>
-                          </>
-                        )}
-                        {isShip2 && capitalShips?.player2?.currentHealth > 0 && (
-                          <>
-                            <rect x={x-22} y={y-10} width={44} height={20} rx={4} fill="#991b1b" stroke="#ef4444" strokeWidth={2} />
-                            <text x={x} y={y+4} textAnchor="middle" fill="white" fontSize="10" fontWeight="bold">NAVE</text>
+                            {isShip1 && capitalShips?.player1?.currentHealth > 0 && (
+                              <rect x={x-18} y={y-8} width={36} height={16} rx={3} fill="#1e40af" stroke="#3b82f6" strokeWidth={2} />
+                            )}
+                            {isShip2 && capitalShips?.player2?.currentHealth > 0 && (
+                              <rect x={x-18} y={y-8} width={36} height={16} rx={3} fill="#991b1b" stroke="#ef4444" strokeWidth={2} />
+                            )}
                           </>
                         )}
                         
@@ -466,7 +474,7 @@
                               cx={x}
                               cy={y}
                               r={20}
-                              fill={config.unitTypes[unit.type].color[`player${unit.player}`]}
+                              fill={config.players[`player${unit.player}`].color}
                               stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
                               strokeWidth="3"
                               onClick={() => handleUnitClick(unit)}

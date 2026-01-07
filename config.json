@@ -8,6 +8,16 @@
       { "q": 8, "r": 7 }
     ]
   },
+  "players": {
+    "player1": {
+      "name": "Ribelli",
+      "color": "#3b82f6"
+    },
+    "player2": {
+      "name": "Impero",
+      "color": "#ef4444"
+    }
+  },
   "capitalShips": {
     "player1": {
       "name": "Nave Comando Ribelle",
