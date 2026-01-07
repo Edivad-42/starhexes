@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1e293b">
+    <meta name="description" content="Star Hexes - Gioco tattico a turni nello spazio">
+    <title>Star Hexes</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: none;
+            width: 100vw;
+            height: 100vh;
+        }
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        #root {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        const StarHexesGame = () => {
+          const [config, setConfig] = useState(null);
+          const [units, setUnits] = useState([]);
+          const [currentPlayer, setCurrentPlayer] = useState(1);
+          const [selectedUnit, setSelectedUnit] = useState(null);
+          const [activatedUnits, setActivatedUnits] = useState(new Set());
+          const [gamePhase, setGamePhase] = useState('action');
+          const [combatLog, setCombatLog] = useState([]);
+          const [needsAIMove, setNeedsAIMove] = useState(false);
+          
+          const unitsRef = useRef(units);
+          const activatedRef = useRef(activatedUnits);
+          
+          useEffect(() => {
+            unitsRef.current = units;
+            activatedRef.current = activatedUnits;
+          }, [units, activatedUnits]);
+
+          useEffect(() => {
+            fetch('config.json')
+              .then(res => res.json())
+              .then(data => {
+                setConfig(data);
+                const initialUnits = [];
+                let unitId = 1;
+                
+                data.startingUnits.player1.forEach(u => {
+                  const unitType = data.unitTypes[u.type];
+                  initialUnits.push({
+                    id: `p1_${unitId++}`,
+                    player: 1,
+                    q: u.q,
+                    r: u.r,
+                    health: unitType.health,
+                    maxHealth: unitType.health,
+                    type: u.type,
+                    damage: unitType.damage,
+                    capitalDamage: unitType.capitalDamage
+                  });
+                });
+                
+                unitId = 1;
+                data.startingUnits.player2.forEach(u => {
+                  const unitType = data.unitTypes[u.type];
+                  initialUnits.push({
+                    id: `p2_${unitId++}`,
+                    player: 2,
+                    q: u.q,
+                    r: u.r,
+                    health: unitType.health,
+                    maxHealth: unitType.health,
+                    type: u.type,
+                    damage: unitType.damage,
+                    capitalDamage: unitType.capitalDamage
+                  });
+                });
+                
+                setUnits(initialUnits);
+              })
+              .catch(err => {
+                console.error('Errore caricamento config:', err);
+              });
+          }, []);
+
+          // Controlla se tutte le unità sono attivate
+          useEffect(() => {
+            if (gamePhase !== 'action') return;
+            
+            const aliveUnits = units.filter(u => u.health > 0);
+            if (aliveUnits.length === 0) return;
+            
+            const allActivated = aliveUnits.every(u => activatedUnits.has(u.id));
+            
+            if (allActivated) {
+              resolveCombat();
+            }
+          }, [activatedUnits, gamePhase]);
+
+          // Gestisce le mosse dell'AI
+          useEffect(() => {
+            if (!needsAIMove || gamePhase !== 'action' || currentPlayer !== 2) return;
+            
+            const timer = setTimeout(() => {
+              makeAIMove();
+            }, config?.ui?.animationSpeed || 1000);
+            
+            return () => clearTimeout(timer);
+          }, [needsAIMove, gamePhase, currentPlayer]);
+
+          if (!config) {
+            return (
+              <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                <div className="text-white text-xl">Caricamento...</div>
+              </div>
+            );
+          }
+
+          const hexUtils = {
+            getNeighbors: (q, r) => {
+              const evenRow = r % 2 === 0;
+              if (evenRow) {
+                return [
+                  [q + 1, r], [q - 1, r],
+                  [q, r - 1], [q - 1, r - 1],
+                  [q, r + 1], [q - 1, r + 1]
+                ];
+              } else {
+                return [
+                  [q + 1, r], [q - 1, r],
+                  [q + 1, r - 1], [q, r - 1],
+                  [q + 1, r + 1], [q, r + 1]
+                ];
+              }
+            }
+          };
+
+          const UnitIcon = ({ x, y, size, src }) => (
+            <image
+              href={src}
+              x={x - size / 2}
+              y={y - size / 2}
+              width={size}
+              height={size}
+              style={{ pointerEvents: 'none' }}
+            />
+          );
+
+          const isOccupied = (q, r, excludeId = null) => {
+            return unitsRef.current.some(u => u.q === q && u.r === r && u.id !== excludeId && u.health > 0);
+          };
+
+          const getUnitAt = (q, r) => {
+            return unitsRef.current.find(u => u.q === q && u.r === r && u.health > 0);
+          };
+
+          const isEngaged = (unit) => {
+            const neighbors = hexUtils.getNeighbors(unit.q, unit.r);
+            const enemyNeighbors = neighbors.filter(([q, r]) => {
+              const neighbor = getUnitAt(q, r);
+              return neighbor && neighbor.player !== unit.player;
+            });
+            return enemyNeighbors.length > 0;
+          };
+
+          const canMove = (unit) => {
+            if (!isEngaged(unit)) return true;
+            
+            const neighbors = hexUtils.getNeighbors(unit.q, unit.r);
+            const enemyNeighbors = neighbors.filter(([q, r]) => {
+              const neighbor = getUnitAt(q, r);
+              return neighbor && neighbor.player !== unit.player;
+            });
+            
+            if (enemyNeighbors.length === 1) return false;
+            
+            return enemyNeighbors.every(([q, r]) => {
+              const enemy = getUnitAt(q, r);
+              const enemyEngagements = hexUtils.getNeighbors(q, r).filter(([nq, nr]) => {
+                const n = getUnitAt(nq, nr);
+                return n && n.player !== enemy.player;
+              });
+              return enemyEngagements.length > 1;
+            });
+          };
+
+          const getValidMoves = (unit) => {
+            if (!canMove(unit)) return [];
+            
+            const neighbors = hexUtils.getNeighbors(unit.q, unit.r);
+            return neighbors.filter(([q, r]) => 
+              q >= 0 && q < config.map.width && 
+              r >= 0 && r < config.map.height && 
+              !isOccupied(q, r, unit.id)
+            );
+          };
+
+          const handleUnitClick = (unit) => {
+            if (gamePhase !== 'action') return;
+            if (unit.player !== currentPlayer) return;
+            if (currentPlayer !== 1) return;
+            if (activatedUnits.has(unit.id)) return;
+            
+            setSelectedUnit(unit);
+          };
+
+          const makeAIMove = () => {
+            setNeedsAIMove(false);
+            
+            const aiUnits = unitsRef.current.filter(u => u.player === 2 && u.health > 0 && !activatedRef.current.has(u.id));
+            
+            if (aiUnits.length === 0) {
+              setCurrentPlayer(1);
+              return;
+            }
+
+            const aiUnit = aiUnits[0];
+            const playerUnits = unitsRef.current.filter(u => u.player === 1 && u.health > 0);
+            const validMoves = getValidMoves(aiUnit);
+
+            if (!canMove(aiUnit) || validMoves.length === 0) {
+              setActivatedUnits(prev => new Set([...prev, aiUnit.id]));
+              setCurrentPlayer(1);
+              return;
+            }
+
+            let bestMove = validMoves[0];
+            let minDistance = Infinity;
+
+            validMoves.forEach(([mq, mr]) => {
+              playerUnits.forEach(pUnit => {
+                const dist = Math.abs(mq - pUnit.q) + Math.abs(mr - pUnit.r);
+                if (dist < minDistance) {
+                  minDistance = dist;
+                  bestMove = [mq, mr];
+                }
+              });
+            });
+
+            setUnits(prevUnits => prevUnits.map(u => 
+              u.id === aiUnit.id ? { ...u, q: bestMove[0], r: bestMove[1] } : u
+            ));
+            setActivatedUnits(prev => new Set([...prev, aiUnit.id]));
+            setCurrentPlayer(1);
+          };
+
+          const handleHexClick = (q, r) => {
+            if (!selectedUnit || gamePhase !== 'action' || currentPlayer !== 1) return;
+            
+            const validMoves = getValidMoves(selectedUnit);
+            const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
+            
+            if (isValidMove) {
+              setUnits(prevUnits => prevUnits.map(u => 
+                u.id === selectedUnit.id ? { ...u, q, r } : u
+              ));
+              setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
+              setSelectedUnit(null);
+              setCurrentPlayer(2);
+              setNeedsAIMove(true);
+            }
+          };
+
+          const handlePass = () => {
+            if (!selectedUnit) return;
+            if (activatedUnits.has(selectedUnit.id)) return;
+
+            setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
+            setSelectedUnit(null);
+            setCurrentPlayer(2);
+            setNeedsAIMove(true);
+          };
+
+          const resolveCombat = () => {
+            setGamePhase('combat');
+            const log = [];
+            const currentUnits = [...unitsRef.current];
+
+            const combatPairs = new Map();
+            
+            currentUnits.forEach(unit => {
+              if (unit.health <= 0) return;
+              
+              const neighbors = hexUtils.getNeighbors(unit.q, unit.r);
+              const enemies = neighbors
+                .map(([q, r]) => currentUnits.find(u => u.q === q && u.r === r && u.health > 0))
+                .filter(n => n && n.player !== unit.player);
+              
+              if (enemies.length > 0) {
+                const damagePerEnemy = unit.damage / enemies.length;
+                enemies.forEach(enemy => {
+                  const key = [unit.id, enemy.id].sort().join('-');
+                  if (!combatPairs.has(key)) {
+                    combatPairs.set(key, { unit, enemy, damage: damagePerEnemy });
+                  }
+                });
+              }
+            });
+
+            const newUnits = currentUnits.map(u => ({ ...u }));
+
+            combatPairs.forEach(({ unit, enemy, damage }) => {
+              const unitIdx = newUnits.findIndex(u => u.id === unit.id);
+              const enemyIdx = newUnits.findIndex(u => u.id === enemy.id);
+              
+              if (unitIdx !== -1 && enemyIdx !== -1) {
+                newUnits[unitIdx].health = Math.max(0, newUnits[unitIdx].health - damage);
+                newUnits[enemyIdx].health = Math.max(0, newUnits[enemyIdx].health - damage);
+                log.push(`${unit.id} e ${enemy.id} si infliggono ${damage.toFixed(0)} danni`);
+              }
+            });
+
+            newUnits.forEach(unit => {
+              if (unit.health <= 0) return;
+              
+              const isInEnemyCapitalZone = unit.player === 1 
+                ? config.capitalZones.player2.includes(unit.q)
+                : config.capitalZones.player1.includes(unit.q);
+              
+              if (isInEnemyCapitalZone) {
+                const hasEnemyNeighbors = hexUtils.getNeighbors(unit.q, unit.r)
+                  .some(([q, r]) => {
+                    const n = newUnits.find(u => u.q === q && u.r === r && u.health > 0);
+                    return n && n.player !== unit.player;
+                  });
+                
+                if (!hasEnemyNeighbors) {
+                  log.push(`${unit.id} infligge ${unit.capitalDamage} danni alla nave capitale nemica!`);
+                }
+              }
+            });
+
+            setUnits(newUnits);
+            setCombatLog(log);
+            
+            setTimeout(() => {
+              setGamePhase('action');
+              setActivatedUnits(new Set());
+              setCombatLog([]);
+              setCurrentPlayer(1);
+              setSelectedUnit(null);
+            }, config.ui.combatLogDuration);
+          };
+
+          const HexGrid = () => {
+            const hexSize = config.map.hexSize;
+            const hexWidth = hexSize * Math.sqrt(3);
+            const hexHeight = hexSize * 2;
+            const vertDist = hexHeight * 0.75;
+            
+            return (
+              <svg width="100%" height="100%" className="bg-gray-900" viewBox="0 0 550 350" preserveAspectRatio="xMidYMid meet">
+                {Array.from({ length: config.map.height }, (_, r) => 
+                  Array.from({ length: config.map.width }, (_, q) => {
+                    const x = hexWidth * q + (r % 2) * (hexWidth / 2) + 40;
+                    const y = vertDist * r + 35;
+                    
+                    const unit = units.find(u => u.q === q && u.r === r && u.health > 0);
+                    const isSelected = selectedUnit && selectedUnit.q === q && selectedUnit.r === r;
+                    const validMoves = selectedUnit ? getValidMoves(selectedUnit) : [];
+                    const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
+                    
+                    const isP1Capital = config.capitalZones.player1.includes(q);
+                    const isP2Capital = config.capitalZones.player2.includes(q);
+                    
+                    let fillColor = '#1e293b';
+                    let strokeColor = '#475569';
+                    let strokeWidth = 2;
+                    
+                    if (isP1Capital) {
+                      strokeColor = '#3b82f6';
+                      strokeWidth = 3;
+                    }
+                    if (isP2Capital) {
+                      strokeColor = '#ef4444';
+                      strokeWidth = 3;
+                    }
+                    if (isValidMove) fillColor = '#064e3b';
+                    if (isSelected) fillColor = '#fbbf24';
+                    
+                    return (
+                      <g key={`${q}-${r}`}>
+                        <polygon
+                          points={`${x},${y-hexSize} ${x+hexSize*0.866},${y-hexSize/2} ${x+hexSize*0.866},${y+hexSize/2} ${x},${y+hexSize} ${x-hexSize*0.866},${y+hexSize/2} ${x-hexSize*0.866},${y-hexSize/2}`}
+                          fill={fillColor}
+                          stroke={strokeColor}
+                          strokeWidth={strokeWidth}
+                          onClick={() => unit ? handleUnitClick(unit) : handleHexClick(q, r)}
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                        />
+                        {unit && unit.health > 0 && (
+                          <>
+                            <circle
+                              cx={x}
+                              cy={y}
+                              r={20}
+                              fill={config.unitTypes[unit.type].color[`player${unit.player}`]}
+                              stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
+                              strokeWidth="3"
+                              onClick={() => handleUnitClick(unit)}
+                              className="cursor-pointer"
+                            />
+                            <UnitIcon x={x} y={y} size={24} src={config.unitTypes[unit.type].icon}/>
+                            {config.ui.showHealthNumbers && (
+                              <text
+                                x={x}
+                                y={y + 12}
+                                textAnchor="middle"
+                                fill="white"
+                                fontSize="9"
+                                fontWeight="bold"
+                                style={{ pointerEvents: 'none' }}
+                              >
+                                {Math.round(unit.health)}
+                              </text>
+                            )}
+                          </>
+                        )}
+                      </g>
+                    );
+                  })
+                )}
+              </svg>
+            );
+          };
+
+          return (
+            <div className="w-full h-full bg-gray-800 flex flex-col overflow-hidden">
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="text-center py-1 bg-gray-900 flex-shrink-0">
+                  <div className="text-white text-sm">
+                    {gamePhase === 'action' ? (
+                      <>
+                        <span className={currentPlayer === 1 ? 'text-blue-400' : 'text-red-400'}>
+                          P{currentPlayer}
+                        </span>
+                        {' '}- {currentPlayer === 1 ? 'Muovi unità' : 'AI pensa...'}
+                      </>
+                    ) : (
+                      <span className="text-yellow-400">COMBATTIMENTO</span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex-1 overflow-hidden relative">
+                  <HexGrid />
+                  {selectedUnit && gamePhase === 'action' && currentPlayer === 1 && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+                      <button
+                        onClick={handlePass}
+                        className="px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-500 active:bg-gray-600"
+                      >
+                        Passa
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-1 p-1 bg-gray-900 text-xs flex-shrink-0">
+                  <div className="bg-blue-900 p-1 rounded">
+                    <span className="text-blue-300 font-bold">P1:</span>
+                    <span className="text-white ml-1">{units.filter(u => u.player === 1 && u.health > 0).length}</span>
+                  </div>
+                  <div className="bg-red-900 p-1 rounded">
+                    <span className="text-red-300 font-bold">P2:</span>
+                    <span className="text-white ml-1">{units.filter(u => u.player === 2 && u.health > 0).length}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        ReactDOM.render(<StarHexesGame />, document.getElementById('root'));
+    </script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
