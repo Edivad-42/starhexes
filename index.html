@@ -18,13 +18,8 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      touch-action: none;
       width: 100vw;
       height: 100vh;
-    }
-
-    * {
-      -webkit-tap-highlight-color: transparent;
     }
 
     #root {
@@ -37,10 +32,7 @@
 <body>
   <div id="root"></div>
 
-  <!-- Load abilities system first -->
-  <script src="abilities.js"></script>
-
-  <!-- Menu and How To Play components (must be type="text/babel" for JSX) -->
+   <!-- Menu and How To Play components (must be type="text/babel" for JSX) -->
   <script type="text/babel">
     // Main Menu Component for Star Hexes
     const MainMenu = ({ onStartGame, onShowHowToPlay }) => {
@@ -204,49 +196,33 @@
     const { useState, useEffect, useRef } = React;
 
     const StarHexesGame = () => {
-      // ==================== STATE MANAGEMENT ====================
-      // Core game state
-      const [gameState, setGameState] = useState('menu'); // 'menu', 'howtoplay', 'game'
+      // ==================== STATE ====================
       const [config, setConfig] = useState(null);
       const [units, setUnits] = useState([]);
       const [capitalShips, setCapitalShips] = useState({ player1: null, player2: null });
       const [currentPlayer, setCurrentPlayer] = useState(1);
       const [selectedUnit, setSelectedUnit] = useState(null);
       const [activatedUnits, setActivatedUnits] = useState(new Set());
-      const [gamePhase, setGamePhase] = useState('action');
-      const [needsAIMove, setNeedsAIMove] = useState(false);
-
-      // Ability system state
-      const [activeAbility, setActiveAbility] = useState(null);
-      const [abilityTargets, setAbilityTargets] = useState([]);
-
-      // UI state
-      const [showUnitInfo, setShowUnitInfo] = useState(false);
+      const [gamePhase, setGamePhase] = useState('action'); // 'action' or 'combat'
+      const [combatLog, setCombatLog] = useState([]);
       const [showCombatLog, setShowCombatLog] = useState(false);
-      const [combatLogEntries, setCombatLogEntries] = useState([]);
-      const [gameOver, setGameOver] = useState(null);
+      const [showUnitInfo, setShowUnitInfo] = useState(false);
 
-      // Refs for accessing state in async operations
       const unitsRef = useRef(units);
-      const activatedRef = useRef(activatedUnits);
       const capitalShipsRef = useRef(capitalShips);
 
-      // Keep refs in sync with state
       useEffect(() => {
         unitsRef.current = units;
-        activatedRef.current = activatedUnits;
         capitalShipsRef.current = capitalShips;
-      }, [units, activatedUnits, capitalShips]);
+      }, [units, capitalShips]);
 
-      // ==================== INITIALIZATION ====================
-      // Load config and initialize game
+      // ==================== LOAD CONFIG ====================
       useEffect(() => {
         fetch('config.json')
           .then(res => res.json())
           .then(data => {
             setConfig(data);
 
-            // Initialize capital ships
             setCapitalShips({
               player1: {
                 ...data.capitalShips.player1,
@@ -258,14 +234,12 @@
               }
             });
 
-            // Initialize units
             const initialUnits = [];
             let unitId = 1;
 
-            // Player 1 units
             data.startingUnits.player1.forEach(u => {
               const unitType = data.unitTypes[u.type];
-              const unit = {
+              initialUnits.push({
                 id: `p1_${unitId++}`,
                 player: 1,
                 q: u.q,
@@ -275,21 +249,13 @@
                 type: u.type,
                 damage: unitType.damage,
                 capitalDamage: unitType.capitalDamage
-              };
-
-              // Initialize ability states
-              if (unitType.abilities) {
-                AbilitySystem.initAbilities(unit, unitType.abilities);
-              }
-
-              initialUnits.push(unit);
+              });
             });
 
-            // Player 2 units
             unitId = 1;
             data.startingUnits.player2.forEach(u => {
               const unitType = data.unitTypes[u.type];
-              const unit = {
+              initialUnits.push({
                 id: `p2_${unitId++}`,
                 player: 2,
                 q: u.q,
@@ -299,174 +265,53 @@
                 type: u.type,
                 damage: unitType.damage,
                 capitalDamage: unitType.capitalDamage
-              };
-
-              // Initialize ability states
-              if (unitType.abilities) {
-                AbilitySystem.initAbilities(unit, unitType.abilities);
-              }
-
-              initialUnits.push(unit);
+              });
             });
 
             setUnits(initialUnits);
           })
-          .catch(err => {
-            console.error('Error loading config:', err);
-          });
+          .catch(err => console.error('Error loading config:', err));
       }, []);
 
-      // ==================== CHECK ALL UNITS ACTIVATED ====================
-      // When all units are activated, trigger combat phase
-      useEffect(() => {
-        // Don't check if already in combat or if combat log is showing
-        if (gamePhase !== 'action' || showCombatLog) return;
-
-        const aliveUnits = units.filter(u => u.health > 0);
-        if (aliveUnits.length === 0) return;
-
-        const allActivated = aliveUnits.every(u => activatedUnits.has(u.id));
-
-        if (allActivated) {
-          console.log('ALL UNITS ACTIVATED - STARTING COMBAT');
-          resolveCombat();
+      // ==================== HEX UTILITIES ====================
+      // Offset coordinates: even rows shift right
+      const getNeighbors = (q, r) => {
+        const evenRow = r % 2 === 0;
+        if (evenRow) {
+          return [
+            [q + 1, r], [q - 1, r],
+            [q, r - 1], [q - 1, r - 1],
+            [q, r + 1], [q - 1, r + 1]
+          ];
+        } else {
+          return [
+            [q + 1, r], [q - 1, r],
+            [q + 1, r - 1], [q, r - 1],
+            [q + 1, r + 1], [q, r + 1]
+          ];
         }
-      }, [activatedUnits, gamePhase, showCombatLog]);
-
-      // ==================== AI MOVE TRIGGER ====================
-      // Trigger AI move when it's AI's turn
-      useEffect(() => {
-        if (!needsAIMove || gamePhase !== 'action' || currentPlayer !== 2) return;
-
-        const timer = setTimeout(() => {
-          makeAIMove();
-        }, config?.ui?.animationSpeed || 1000);
-
-        return () => clearTimeout(timer);
-      }, [needsAIMove, gamePhase, currentPlayer]);
-
-      // ==================== VICTORY CHECK ====================
-      // Check for victory conditions after combat
-      useEffect(() => {
-        // Don't check victory if game hasn't started or is already over
-        if (gamePhase !== 'action' || gameOver || units.length === 0) return;
-        if (!capitalShips.player1 || !capitalShips.player2) return;
-
-        const p1Units = units.filter(u => u.player === 1 && u.health > 0);
-        const p2Units = units.filter(u => u.player === 2 && u.health > 0);
-        const p1Ship = capitalShips.player1;
-        const p2Ship = capitalShips.player2;
-
-        // Check Player 2 victory (P1 loses)
-        if ((p1Units.length === 0 || p1Ship.currentHealth <= 0) && !gameOver) {
-          setGameOver('player2');
-          setTimeout(() => {
-            if (confirm('Player 2 (Empire) wins! Play again?')) {
-              window.location.reload();
-            }
-          }, 500);
-        }
-        // Check Player 1 victory (P2 loses)
-        else if ((p2Units.length === 0 || p2Ship.currentHealth <= 0) && !gameOver) {
-          setGameOver('player1');
-          setTimeout(() => {
-            if (confirm('Player 1 (Rebels) wins! Play again?')) {
-              window.location.reload();
-            }
-          }, 500);
-        }
-      }, [units, capitalShips, gamePhase, gameOver]);
-
-      // ==================== MENU HANDLERS ====================
-      const handleStartGame = () => {
-        setGameState('game');
-      };
-
-      const handleShowHowToPlay = () => {
-        setGameState('howtoplay');
-      };
-
-      const handleBackToMenu = () => {
-        setGameState('menu');
-      };
-
-      // ==================== LOADING STATE ====================
-      if (!config) {
-        return (
-          <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-            <div className="text-white text-xl">Loading...</div>
-          </div>
-        );
-      }
-
-      // ==================== MENU RENDER ====================
-      if (gameState === 'menu') {
-        return <MainMenu onStartGame={handleStartGame} onShowHowToPlay={handleShowHowToPlay} />;
-      }
-
-      // ==================== HOW TO PLAY RENDER ====================
-      if (gameState === 'howtoplay') {
-        return <HowToPlay onBack={handleBackToMenu} />;
-      }
-
-      // ==================== HEXAGONAL GRID UTILITIES ====================
-      const hexUtils = {
-        getNeighbors: (q, r) => {
-          const evenRow = r % 2 === 0;
-          if (evenRow) {
-            return [
-              [q + 1, r], [q - 1, r],
-              [q, r - 1], [q - 1, r - 1],
-              [q, r + 1], [q - 1, r + 1]
-            ];
-          } else {
-            return [
-              [q + 1, r], [q - 1, r],
-              [q + 1, r - 1], [q, r - 1],
-              [q + 1, r + 1], [q, r + 1]
-            ];
-          }
-        }
-      };
-
-      // ==================== UNIT ICON COMPONENT ====================
-      const UnitIcon = ({ x, y, size, src }) => (
-        <image
-          href={src}
-          x={x - size / 2}
-          y={y - size / 2}
-          width={size}
-          height={size}
-          style={{ pointerEvents: 'none' }}
-        />
-      );
-
-      // ==================== UNIT QUERY FUNCTIONS ====================
-      const isOccupied = (q, r, excludeId = null) => {
-        return unitsRef.current.some(u => u.q === q && u.r === r && u.id !== excludeId && u.health > 0);
       };
 
       const getUnitAt = (q, r) => {
         return unitsRef.current.find(u => u.q === q && u.r === r && u.health > 0);
       };
 
-      // SIMPLIFIED ENGAGEMENT: If unit is adjacent to enemy, it's engaged and can't move
+      const isOccupied = (q, r, excludeId = null) => {
+        return unitsRef.current.some(u => u.q === q && u.r === r && u.id !== excludeId && u.health > 0);
+      };
+
       const isEngaged = (unit) => {
-        const neighbors = hexUtils.getNeighbors(unit.q, unit.r);
+        const neighbors = getNeighbors(unit.q, unit.r);
         return neighbors.some(([q, r]) => {
           const neighbor = getUnitAt(q, r);
           return neighbor && neighbor.player !== unit.player;
         });
       };
 
-      const canMove = (unit) => {
-        return !isEngaged(unit);
-      };
-
       const getValidMoves = (unit) => {
-        if (!canMove(unit)) return [];
+        if (isEngaged(unit)) return []; // Engaged units can't move
 
-        const neighbors = hexUtils.getNeighbors(unit.q, unit.r);
+        const neighbors = getNeighbors(unit.q, unit.r);
         return neighbors.filter(([q, r]) =>
           q >= 0 && q < config.map.width &&
           r >= 0 && r < config.map.height &&
@@ -475,469 +320,264 @@
         );
       };
 
-      // ==================== ABILITY HANDLERS ====================
-      const handleAbilityClick = (abilityId) => {
-        if (!selectedUnit || gamePhase !== 'action' || currentPlayer !== 1) return;
+      // ==================== CHECK ALL UNITS ACTIVATED ====================
+      useEffect(() => {
+        if (gamePhase !== 'action') return;
 
-        const ability = ABILITIES[abilityId];
-        if (!ability || !ability.canUse(selectedUnit, {})) return;
+        const aliveUnits = units.filter(u => u.health > 0);
+        if (aliveUnits.length === 0) return;
 
-        // Movement abilities
-        if (ability.trigger === 'movement') {
-          const gameStateObj = {
-            config,
-            isOccupied,
-            getUnitAt
-          };
-          const result = ability.effect(selectedUnit, gameStateObj, hexUtils);
-          setActiveAbility({ id: abilityId, type: 'movement', moves: result.validMoves });
-          return;
+        const allActivated = aliveUnits.every(u => activatedUnits.has(u.id));
+
+        if (allActivated) {
+          console.log('All units activated - starting combat');
+          resolveCombat();
         }
-
-        // Attack abilities
-        if (ability.trigger === 'attack') {
-          const gameStateObj = {
-            config,
-            isOccupied,
-            getUnitAt
-          };
-          const result = ability.effect(selectedUnit, gameStateObj, hexUtils);
-          setActiveAbility({ id: abilityId, type: 'attack', targets: result.targetHexes });
-          setAbilityTargets(result.targetHexes);
-          return;
-        }
-
-        // Combat buff abilities (like preciseShot)
-        if (ability.trigger === 'combat') {
-          ability.onUse(selectedUnit);
-          setUnits([...unitsRef.current]); // Trigger re-render
-          // Don't deselect, player can still move
-        }
-      };
-
-      const handleAbilityTargetClick = (q, r) => {
-        if (!activeAbility || !selectedUnit) return;
-
-        const ability = ABILITIES[activeAbility.id];
-
-        if (activeAbility.type === 'attack') {
-          // Check if target is valid
-          const isValidTarget = abilityTargets.some(([tq, tr]) => tq === q && tr === r);
-          if (!isValidTarget) return;
-
-          // Apply attack
-          const target = getUnitAt(q, r);
-          if (target) {
-            const attackResult = ability.onUse(selectedUnit, [q, r]);
-
-            setUnits(prevUnits => prevUnits.map(u => {
-              if (u.id === target.id) {
-                const newHealth = Math.max(0, u.health - attackResult.damage);
-                return { ...u, health: newHealth };
-              }
-              return u;
-            }));
-
-            // Clear ability state but keep unit selected (player can still move)
-            setActiveAbility(null);
-            setAbilityTargets([]);
-          }
-        }
-      };
-
-      // ==================== UNIT CLICK HANDLER ====================
-      const handleUnitClick = (unit) => {
-        // During combat phase, only show info
-        if (gamePhase !== 'action') {
-          setSelectedUnit(unit);
-          setShowUnitInfo(true);
-          return;
-        }
-
-        // Can always select to view info
-        setSelectedUnit(unit);
-
-        // Clear any active ability when switching units
-        setActiveAbility(null);
-        setAbilityTargets([]);
-
-        // Can't activate enemy units or during AI turn
-        if (unit.player !== currentPlayer || currentPlayer !== 1) {
-          return;
-        }
-
-        // Can't activate already activated units
-        if (activatedUnits.has(unit.id)) {
-          return;
-        }
-      };
-
-      // ==================== AI MOVE LOGIC ====================
-      const makeAIMove = () => {
-        setNeedsAIMove(false);
-
-        const aiUnits = unitsRef.current.filter(u => u.player === 2 && u.health > 0 && !activatedRef.current.has(u.id));
-
-        if (aiUnits.length === 0) {
-          setCurrentPlayer(1);
-          return;
-        }
-
-        const aiUnit = aiUnits[0];
-        const playerUnits = unitsRef.current.filter(u => u.player === 1 && u.health > 0);
-        const validMoves = getValidMoves(aiUnit);
-
-        if (!canMove(aiUnit) || validMoves.length === 0) {
-          setActivatedUnits(prev => new Set([...prev, aiUnit.id]));
-          setCurrentPlayer(1);
-          return;
-        }
-
-        // Simple AI: move towards nearest enemy
-        let bestMove = validMoves[0];
-        let minDistance = Infinity;
-
-        validMoves.forEach(([mq, mr]) => {
-          playerUnits.forEach(pUnit => {
-            const dist = Math.abs(mq - pUnit.q) + Math.abs(mr - pUnit.r);
-            if (dist < minDistance) {
-              minDistance = dist;
-              bestMove = [mq, mr];
-            }
-          });
-        });
-
-        setUnits(prevUnits => prevUnits.map(u =>
-          u.id === aiUnit.id ? { ...u, q: bestMove[0], r: bestMove[1] } : u
-        ));
-        setActivatedUnits(prev => new Set([...prev, aiUnit.id]));
-        setCurrentPlayer(1);
-      };
-
-      // ==================== HEX CLICK HANDLER ====================
-      const handleHexClick = (q, r) => {
-        // If ability is active and it's an attack ability, handle target click
-        if (activeAbility && activeAbility.type === 'attack') {
-          handleAbilityTargetClick(q, r);
-          return;
-        }
-
-        if (!selectedUnit || gamePhase !== 'action' || currentPlayer !== 1) return;
-        if (selectedUnit.player !== 1) return;
-        if (activatedUnits.has(selectedUnit.id)) return;
-
-        // Check valid moves (either from movement ability or normal movement)
-        let validMoves = [];
-        if (activeAbility?.type === 'movement') {
-          validMoves = activeAbility.moves;
-        } else {
-          validMoves = getValidMoves(selectedUnit);
-        }
-
-        const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
-
-        if (isValidMove) {
-          // Apply movement ability effect if active
-          if (activeAbility?.type === 'movement') {
-            const ability = ABILITIES[activeAbility.id];
-            ability.onUse(selectedUnit);
-            setActiveAbility(null);
-          }
-
-          setUnits(prevUnits => prevUnits.map(u =>
-            u.id === selectedUnit.id ? { ...u, q, r } : u
-          ));
-          setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
-          setSelectedUnit(null);
-          setActiveAbility(null);
-          setAbilityTargets([]);
-          setCurrentPlayer(2);
-          setNeedsAIMove(true);
-        }
-      };
-
-      // ==================== PASS HANDLER ====================
-      const handlePass = () => {
-        if (!selectedUnit) return;
-        if (activatedUnits.has(selectedUnit.id)) return;
-        if (selectedUnit.player !== 1 || currentPlayer !== 1) return;
-
-        setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
-        setSelectedUnit(null);
-        setActiveAbility(null);
-        setAbilityTargets([]);
-        setCurrentPlayer(2);
-        setNeedsAIMove(true);
-      };
-
-      const hexDistance = (a, b) => {
-        const dq = a.q - b.q;
-        const dr = a.r - b.r;
-        return Math.max(
-          Math.abs(dq),
-          Math.abs(dr),
-          Math.abs(dq + dr)
-        );
-      };
+      }, [activatedUnits, gamePhase, units]);
 
       // ==================== COMBAT RESOLUTION ====================
       const resolveCombat = () => {
+        console.log('=== COMBAT START ===');
+        const log = [];
+
+        // Get snapshot of alive units
+        const aliveUnits = unitsRef.current.filter(u => u.health > 0);
+
+        log.push('=== COMBAT PHASE ===');
+        log.push(`Units alive: ${aliveUnits.map(u => `${u.id}(${u.health}HP)`).join(', ')}`);
+        log.push('');
+
+        // Calculate damage for each unit
+        const damageQueue = {};
+        aliveUnits.forEach(u => damageQueue[u.id] = 0);
+
+        log.push('--- ATTACKS ---');
+        aliveUnits.forEach(attacker => {
+          const neighbors = getNeighbors(attacker.q, attacker.r);
+          const enemies = aliveUnits.filter(unit => {
+            return unit.player !== attacker.player &&
+              neighbors.some(([nq, nr]) => unit.q === nq && unit.r === nr);
+          });
+
+          if (enemies.length === 0) {
+            log.push(`${attacker.id}: No adjacent enemies`);
+            return;
+          }
+
+          const damagePerEnemy = attacker.damage / enemies.length;
+          log.push(`${attacker.id} (${attacker.damage} dmg) → ${enemies.length} enemies = ${damagePerEnemy.toFixed(1)} dmg each`);
+
+          enemies.forEach(enemy => {
+            damageQueue[enemy.id] += damagePerEnemy;
+            log.push(`  → ${enemy.id} receives ${damagePerEnemy.toFixed(1)} dmg`);
+          });
+        });
+
+        log.push('');
+        log.push('--- DAMAGE APPLICATION ---');
+
+        // Apply damage
+        const updatedUnits = unitsRef.current.map(unit => {
+          if (unit.health <= 0) return unit;
+
+          const damage = damageQueue[unit.id] || 0;
+          if (damage > 0) {
+            const newHealth = Math.max(0, unit.health - damage);
+            log.push(`${unit.id}: ${unit.health.toFixed(1)} - ${damage.toFixed(1)} = ${newHealth.toFixed(1)} HP ${newHealth === 0 ? '💀' : ''}`);
+            return { ...unit, health: newHealth };
+          }
+          return unit;
+        });
+
+        log.push('');
+        log.push('--- CAPITAL SHIP ATTACKS ---');
+
+        // Capital ship damage
+        let newCapitalShips = { ...capitalShipsRef.current };
+        let capitalDamaged = false;
+
+        aliveUnits.forEach(unit => {
+          const isInP1Zone = config.capitalZones.player1.some(z => z.q === unit.q && z.r === unit.r);
+          const isInP2Zone = config.capitalZones.player2.some(z => z.q === unit.q && z.r === unit.r);
+          const isInEnemyZone = unit.player === 1 ? isInP2Zone : isInP1Zone;
+
+          if (!isInEnemyZone) return;
+
+          const neighbors = getNeighbors(unit.q, unit.r);
+          const hasEnemies = aliveUnits.some(other => {
+            return other.player !== unit.player &&
+              neighbors.some(([nq, nr]) => other.q === nq && other.r === nr);
+          });
+
+          if (hasEnemies) {
+            log.push(`${unit.id}: In enemy zone but ENGAGED - no capital damage`);
+            return;
+          }
+
+          const targetShip = unit.player === 1 ? 'player2' : 'player1';
+          const oldHealth = newCapitalShips[targetShip].currentHealth;
+          newCapitalShips[targetShip] = {
+            ...newCapitalShips[targetShip],
+            currentHealth: Math.max(0, oldHealth - unit.capitalDamage)
+          };
+
+          capitalDamaged = true;
+          log.push(`${unit.id}: Strikes ${newCapitalShips[targetShip].name} for ${unit.capitalDamage} dmg (${oldHealth} → ${newCapitalShips[targetShip].currentHealth})`);
+        });
+
+        if (!capitalDamaged) {
+          log.push('No capital ship damage');
+        }
+
+        log.push('');
+        log.push('=== COMBAT END ===');
+
+        console.log('Combat log:', log);
+
+        setUnits(updatedUnits);
+        setCapitalShips(newCapitalShips);
+        setCombatLog(log);
+        setShowCombatLog(true);
         setGamePhase('combat');
-
-        const events = [];
-
-        // Copia reale delle unità
-        const units = unitsRef.current.map(u => ({ ...u }));
-        const capitalShips = { ...capitalShipsRef.current };
-
-        // ==============================
-        // 1️⃣ SNAPSHOT IMMUTABILE
-        // ==============================
-        const snapshot = units
-          .filter(u => u.health > 0)
-          .map(u => ({
-            id: u.id,
-            q: u.q,
-            r: u.r,
-            player: u.player,
-            damage: u.damage
-          }));
-
-        // ==============================
-        // 2️⃣ MAPPA DANNI (ZERO ASSOLUTO)
-        // ==============================
-        const damageMap = {};
-        snapshot.forEach(u => {
-          damageMap[u.id] = 0;
-        });
-
-        // ==============================
-        // 3️⃣ OGNI UNITÀ ATTACCA UNA VOLTA
-        // ==============================
-        snapshot.forEach(attacker => {
-          const realAttacker = units.find(u => u.id === attacker.id);
-          if (!realAttacker) return;
-
-          // trova nemici adiacenti
-          const targets = snapshot.filter(
-            u =>
-              u.player !== attacker.player &&
-              hexDistance(attacker, u) === 1
-          );
-
-          if (targets.length === 0) return;
-
-          // danno base
-          let totalDamage = attacker.damage;
-
-          // passive ATTACK (una sola volta)
-          totalDamage = AbilitySystem.applyPassiveAttack(
-            realAttacker,
-            totalDamage,
-            config
-          );
-
-          const split = totalDamage / targets.length;
-
-          targets.forEach(t => {
-            damageMap[t.id] += split;
-
-            events.push({
-              type: 'combat',
-              text: `${attacker.id} → ${t.id} (${Math.round(split)})`
-            });
-          });
-        });
-
-        // ==============================
-        // 4️⃣ APPLICA DANNI (UNA SOLA VOLTA)
-        // ==============================
-        units.forEach(unit => {
-          if (unit.health <= 0) return;
-
-          const dmg = damageMap[unit.id];
-          if (!dmg || dmg <= 0) return;
-
-          const finalDamage = AbilitySystem.applyPassiveDefense(
-            unit,
-            dmg,
-            config
-          );
-
-          unit.health = Math.max(0, unit.health - finalDamage);
-        });
-
-        // ==============================
-        // 5️⃣ CAPITAL SHIP (SEMPLICE)
-        // ==============================
-        units.forEach(unit => {
-          if (unit.health <= 0) return;
-
-          const inEnemyZone =
-            unit.player === 1
-              ? config.capitalZones.player2.some(z => z.q === unit.q && z.r === unit.r)
-              : config.capitalZones.player1.some(z => z.q === unit.q && z.r === unit.r);
-
-          if (!inEnemyZone) return;
-
-          const engaged = snapshot.some(
-            u =>
-              u.player !== unit.player &&
-              hexDistance(unit, u) === 1
-          );
-
-          if (engaged) return;
-
-          const target = unit.player === 1 ? 'player2' : 'player1';
-          capitalShips[target].currentHealth -= unit.capitalDamage;
-
-          events.push({
-            type: 'capital',
-            text: `${unit.id} hits ${capitalShips[target].name}`
-          });
-        });
-
-        // ==============================
-        // 6️⃣ COOLDOWN
-        // ==============================
-        AbilitySystem.resetCooldowns(units);
-
-        setUnits(units);
-        setCapitalShips(capitalShips);
-        showCombatEventsSequentially(events);
       };
 
       const handleCombatLogOk = () => {
-        console.log('Combat log OK clicked');
+        console.log('Combat log OK');
         setShowCombatLog(false);
-        setCombatLogEntries([]);
+        setCombatLog([]);
         setGamePhase('action');
         setActivatedUnits(new Set());
         setCurrentPlayer(1);
         setSelectedUnit(null);
       };
 
-      // ==================== HEX GRID COMPONENT ====================
-      const HexGrid = () => {
-        const hexSize = config.map.hexSize;
-        const hexWidth = hexSize * Math.sqrt(3);
-        const hexHeight = hexSize * 2;
-        const vertDist = hexHeight * 0.75;
+      // ==================== PLAYER ACTIONS ====================
+      const handleUnitClick = (unit) => {
+        if (gamePhase !== 'action') return;
+        if (unit.player !== 1 || currentPlayer !== 1) return;
+        if (activatedUnits.has(unit.id)) return;
 
-        const ship1Pos = config.capitalShips.player1.position;
-        const ship2Pos = config.capitalShips.player2.position;
-        const disabledHexes = config.map.disabledHexes || [];
+        setSelectedUnit(unit);
+      };
 
-        const isHexDisabled = (q, r) => {
-          return disabledHexes.some(hex => hex.q === q && hex.r === r);
-        };
+      const handleHexClick = (q, r) => {
+        if (!selectedUnit || gamePhase !== 'action' || currentPlayer !== 1) return;
+        if (activatedUnits.has(selectedUnit.id)) return;
 
-        const isInCapitalZone = (q, r, player) => {
-          const zones = player === 1 ? config.capitalZones.player1 : config.capitalZones.player2;
-          return zones.some(zone => zone.q === q && zone.r === r);
-        };
+        const validMoves = getValidMoves(selectedUnit);
+        const isValid = validMoves.some(([mq, mr]) => mq === q && mr === r);
 
+        if (isValid) {
+          setUnits(prev => prev.map(u =>
+            u.id === selectedUnit.id ? { ...u, q, r } : u
+          ));
+          setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
+          setSelectedUnit(null);
+        }
+      };
+
+      const handlePass = () => {
+        if (!selectedUnit || activatedUnits.has(selectedUnit.id)) return;
+
+        setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
+        setSelectedUnit(null);
+      };
+
+      // ==================== RENDERING ====================
+      if (!config) {
         return (
-          <svg width="100%" height="100%" className="bg-gray-900" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet">
+          <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+            <div className="text-white text-xl">Loading...</div>
+          </div>
+        );
+      }
 
-            {/* Capital ship labels */}
-            <text
-              x="10"
-              y="100"
-              fill="#3b82f6"
-              fontSize="11"
-              fontWeight="bold"
-              letterSpacing="0.5"
-              transform="rotate(-30 10 100)"
-              style={{ transformOrigin: '10px 100px' }}
-            >
-              {config.capitalShips.player1.name}
-            </text>
-            <text
-              x="585"
-              y="300"
-              fill="#ef4444"
-              fontSize="11"
-              fontWeight="bold"
-              letterSpacing="0.5"
-              textAnchor="end"
-              transform="rotate(-30 585 300)"
-              style={{ transformOrigin: '585px 300px' }}
-            >
-              {config.capitalShips.player2.name}
-            </text>
+      const hexSize = config.map.hexSize;
+      const hexWidth = hexSize * Math.sqrt(3);
+      const hexHeight = hexSize * 2;
+      const vertDist = hexHeight * 0.75;
 
-            {/* Hex grid */}
-            {Array.from({ length: config.map.height }, (_, r) =>
-              Array.from({ length: config.map.width }, (_, q) => {
-                if (isHexDisabled(q, r)) return null;
+      return (
+        <div className="w-full h-full bg-gray-800 flex flex-col">
+          {/* Top Bar */}
+          <div className="flex justify-center items-center py-2 bg-gray-900 text-white">
+            {gamePhase === 'action' ? (
+              <span className={currentPlayer === 1 ? 'text-blue-400' : 'text-red-400'}>
+                Player {currentPlayer} - Move units
+              </span>
+            ) : (
+              <span className="text-yellow-400">COMBAT</span>
+            )}
+          </div>
 
-                const x = hexWidth * q + (r % 2) * (hexWidth / 2) + 40;
-                const y = vertDist * r + 35;
+          {/* Game Board */}
+          <div className="flex-1 relative overflow-hidden">
+            <svg width="100%" height="100%" className="bg-gray-900" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet">
+              {/* Capital ship labels */}
+              <text x="10" y="100" fill="#3b82f6" fontSize="11" fontWeight="bold" transform="rotate(-30 10 100)">
+                {config.capitalShips.player1.name}
+              </text>
+              <text x="585" y="300" fill="#ef4444" fontSize="11" fontWeight="bold" textAnchor="end" transform="rotate(-30 585 300)">
+                {config.capitalShips.player2.name}
+              </text>
 
-                const unit = units.find(u => u.q === q && u.r === r && u.health > 0);
-                const isSelected = selectedUnit && selectedUnit.q === q && selectedUnit.r === r;
+              {/* Hexes */}
+              {Array.from({ length: config.map.height }, (_, r) =>
+                Array.from({ length: config.map.width }, (_, q) => {
+                  if (config.map.disabledHexes.some(h => h.q === q && h.r === r)) return null;
 
-                // Get valid moves based on active ability or normal movement
-                let validMoves = [];
-                if (selectedUnit && selectedUnit.player === 1 && !activatedUnits.has(selectedUnit.id) && gamePhase === 'action') {
-                  if (activeAbility?.type === 'movement') {
-                    validMoves = activeAbility.moves;
-                  } else {
-                    validMoves = getValidMoves(selectedUnit);
-                  }
-                }
+                  const x = hexWidth * q + (r % 2) * (hexWidth / 2) + 40;
+                  const y = vertDist * r + 35;
 
-                const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
-                const isAbilityTarget = abilityTargets.some(([mq, mr]) => mq === q && mr === r);
+                  const unit = units.find(u => u.q === q && u.r === r && u.health > 0);
+                  const isSelected = selectedUnit && selectedUnit.q === q && selectedUnit.r === r;
 
-                const isP1Capital = isInCapitalZone(q, r, 1);
-                const isP2Capital = isInCapitalZone(q, r, 2);
+                  const validMoves = selectedUnit && !activatedUnits.has(selectedUnit.id) ? getValidMoves(selectedUnit) : [];
+                  const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
 
-                let fillColor = '#1e293b';
-                let strokeColor = '#475569';
-                let strokeWidth = 2;
+                  const isP1Zone = config.capitalZones.player1.some(z => z.q === q && z.r === r);
+                  const isP2Zone = config.capitalZones.player2.some(z => z.q === q && z.r === r);
 
-                if (isP1Capital) {
-                  fillColor = '#1e3a5f';
-                  strokeColor = '#3b82f6';
-                  strokeWidth = 4;
-                }
-                if (isP2Capital) {
-                  fillColor = '#4a1a1a';
-                  strokeColor = '#ef4444';
-                  strokeWidth = 4;
-                }
-                if (isValidMove) fillColor = '#064e3b';
-                if (isAbilityTarget) fillColor = '#7f1d1d';
-                if (isSelected) fillColor = '#fbbf24';
+                  let fill = '#1e293b';
+                  let stroke = '#475569';
+                  let strokeWidth = 2;
 
-                return (
-                  <g key={`${q}-${r}`}>
-                    <polygon
-                      points={`${x},${y - hexSize} ${x + hexSize * 0.866},${y - hexSize / 2} ${x + hexSize * 0.866},${y + hexSize / 2} ${x},${y + hexSize} ${x - hexSize * 0.866},${y + hexSize / 2} ${x - hexSize * 0.866},${y - hexSize / 2}`}
-                      fill={fillColor}
-                      stroke={strokeColor}
-                      strokeWidth={strokeWidth}
-                      onClick={() => unit ? handleUnitClick(unit) : handleHexClick(q, r)}
-                      className="cursor-pointer hover:opacity-80 transition-opacity"
-                    />
+                  if (isP1Zone) { fill = '#1e3a5f'; stroke = '#3b82f6'; strokeWidth = 4; }
+                  if (isP2Zone) { fill = '#4a1a1a'; stroke = '#ef4444'; strokeWidth = 4; }
+                  if (isValidMove) fill = '#064e3b';
+                  if (isSelected) fill = '#fbbf24';
 
-                    {/* Units */}
-                    {unit && unit.health > 0 && (
-                      <>
-                        <circle
-                          cx={x}
-                          cy={y}
-                          r={20}
-                          fill={config.players[`player${unit.player}`].color}
-                          stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
-                          strokeWidth="3"
-                          onClick={() => handleUnitClick(unit)}
-                          className="cursor-pointer"
-                        />
-                        <UnitIcon x={x} y={y} size={24} src={config.unitTypes[unit.type].icon} />
-                        {config.ui.showHealthNumbers && (
+                  return (
+                    <g key={`${q}-${r}`}>
+                      <polygon
+                        points={`${x},${y - hexSize} ${x + hexSize * 0.866},${y - hexSize / 2} ${x + hexSize * 0.866},${y + hexSize / 2} ${x},${y + hexSize} ${x - hexSize * 0.866},${y + hexSize / 2} ${x - hexSize * 0.866},${y - hexSize / 2}`}
+                        fill={fill}
+                        stroke={stroke}
+                        strokeWidth={strokeWidth}
+                        onClick={() => unit ? handleUnitClick(unit) : handleHexClick(q, r)}
+                        className="cursor-pointer hover:opacity-80"
+                      />
+
+                      {unit && (
+                        <>
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r={20}
+                            fill={config.players[`player${unit.player}`].color}
+                            stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
+                            strokeWidth="3"
+                            onClick={() => handleUnitClick(unit)}
+                            className="cursor-pointer"
+                          />
+                          <image
+                            href={config.unitTypes[unit.type].icon}
+                            x={x - 12}
+                            y={y - 12}
+                            width={24}
+                            height={24}
+                            style={{ pointerEvents: 'none' }}
+                          />
                           <text
                             x={x}
                             y={y + 12}
@@ -949,326 +589,137 @@
                           >
                             {Math.round(unit.health)}
                           </text>
-                        )}
-                      </>
-                    )}
-                  </g>
-                );
-              })
+                        </>
+                      )}
+                    </g>
+                  );
+                })
+              )}
+            </svg>
+
+            {/* Action Buttons */}
+            {selectedUnit && !activatedUnits.has(selectedUnit.id) && gamePhase === 'action' && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                <button onClick={handlePass} className="px-4 py-2 bg-gray-700 text-white rounded-lg">
+                  Pass
+                </button>
+                <button onClick={() => setShowUnitInfo(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg">
+                  ℹ️ Info
+                </button>
+              </div>
             )}
-          </svg>
-        );
-      };
-
-      // ==================== UNIT INFO MODAL ====================
-      const UnitInfoModal = ({ unit, onClose }) => {
-        if (!unit) return null;
-
-        const unitType = config.unitTypes[unit.type];
-        const playerColor = config.players[`player${unit.player}`].color;
-        const abilities = AbilitySystem.getAvailableAbilities(unit, config);
-
-        return (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
-            onClick={onClose}
-          >
-            <div
-              className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border-4"
-              style={{ borderColor: playerColor }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center gap-4 mb-4">
-                <img src={unitType.icon} alt={unitType.name} className="w-16 h-16" />
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-white">{unitType.name}</h2>
-                  <p className="text-gray-400 text-sm">{unit.id}</p>
-                </div>
-              </div>
-
-              {/* Description */}
-              <p className="text-gray-300 mb-4 italic">{unitType.description}</p>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-gray-700 rounded p-2">
-                  <div className="text-gray-400 text-xs mb-1">Health</div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-600 rounded h-3 overflow-hidden">
-                      <div
-                        className="bg-green-500 h-full transition-all"
-                        style={{ width: `${(unit.health / unit.maxHealth * 100)}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-white text-sm font-bold">{Math.round(unit.health)}/{unit.maxHealth}</span>
-                  </div>
-                </div>
-
-                <div className="bg-gray-700 rounded p-2">
-                  <div className="text-gray-400 text-xs">Damage</div>
-                  <div className="text-white font-bold text-lg">{unit.damage}</div>
-                </div>
-
-                <div className="bg-gray-700 rounded p-2">
-                  <div className="text-gray-400 text-xs">Capital Damage</div>
-                  <div className="text-white font-bold text-lg">{unit.capitalDamage}</div>
-                </div>
-              </div>
-
-              {/* Abilities */}
-              {abilities.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-white font-bold mb-2">Abilities:</h3>
-                  <div className="space-y-2">
-                    {abilities.map(ability => (
-                      <div key={ability.id} className="bg-gray-700 rounded p-2">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-white font-semibold">
-                            {ability.icon} {ability.name}
-                          </span>
-                          {ability.type === 'active' && ability.state && (
-                            <span className="text-xs text-gray-400">
-                              {ability.state.charges !== null ? `${ability.state.charges}/${ability.maxCharges}` : ''}
-                              {ability.state.cooldown > 0 ? ` (CD: ${ability.state.cooldown})` : ''}
-                            </span>
-                          )}
-                          {ability.type === 'passive' && (
-                            <span className="text-xs text-blue-400">Passive</span>
-                          )}
-                        </div>
-                        <p className="text-gray-300 text-sm">{ability.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Close Button */}
-              <button
-                onClick={onClose}
-                className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-              >
-                Close
-              </button>
-            </div>
           </div>
-        );
-      };
 
-      // ==================== COMBAT LOG MODAL ====================
-      const CombatLogModal = ({ entries, onClose }) => {
-        console.log('CombatLogModal render - entries:', entries?.length);
-
-        if (!entries || entries.length === 0) {
-          console.log('No entries - returning null');
-          return null;
-        }
-
-        const getEntryColor = (type) => {
-          switch (type) {
-            case 'phase': return 'text-yellow-400 font-bold';
-            case 'attack': return 'text-blue-300';
-            case 'damage': return 'text-orange-300';
-            case 'result': return 'text-green-300';
-            case 'capital': return 'text-red-400 font-semibold';
-            case 'info': return 'text-gray-400';
-            default: return 'text-white';
-          }
-        };
-
-        console.log('Rendering combat log modal with', entries.length, 'entries');
-
-        return (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4 border-4 border-yellow-500 max-h-[80vh] flex flex-col"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="mb-4">
-                <h2 className="text-3xl font-bold text-yellow-400 text-center">⚔️ COMBAT LOG ⚔️</h2>
+          {/* Bottom Status */}
+          <div className="grid grid-cols-2 gap-1 p-1 bg-gray-900 text-xs">
+            <div className="bg-blue-900 p-1 rounded">
+              <div className="flex justify-between text-white mb-1">
+                <span className="font-bold">P1</span>
+                <span>{units.filter(u => u.player === 1 && u.health > 0).length} units</span>
               </div>
-
-              {/* Scrollable Log */}
-              <div className="flex-1 overflow-y-auto bg-gray-800 rounded p-4 mb-4 font-mono text-sm">
-                {entries.map((entry, index) => (
+              <div className="flex items-center gap-1">
+                <div className="flex-1 bg-gray-700 rounded h-2">
                   <div
-                    key={index}
-                    className={`mb-1 ${getEntryColor(entry.type)}`}
-                  >
-                    {entry.text}
-                  </div>
-                ))}
+                    className="bg-blue-400 h-full"
+                    style={{ width: `${(capitalShips.player1?.currentHealth / capitalShips.player1?.health * 100) || 0}%` }}
+                  ></div>
+                </div>
+                <span className="text-white text-[10px]">{capitalShips.player1?.currentHealth || 0}</span>
               </div>
-
-              {/* OK Button */}
-              <button
-                onClick={onClose}
-                className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl font-bold rounded-lg transition-colors"
-              >
-                OK
-              </button>
             </div>
-          </div>
-        );
-      };
-
-      // ==================== MAIN GAME RENDER ====================
-      return (
-        <div className="w-full h-full bg-gray-800 flex flex-col overflow-hidden">
-          <div className="flex-1 flex flex-col overflow-hidden">
-
-            {/* Top Bar */}
-            <div className="flex justify-between items-center py-1 px-2 bg-gray-900 flex-shrink-0">
-              <button
-                onClick={handleBackToMenu}
-                className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors"
-              >
-                ← Menu
-              </button>
-
-              <div className="text-white text-sm">
-                {gamePhase === 'action' ? (
-                  <>
-                    <span className={currentPlayer === 1 ? 'text-blue-400' : 'text-red-400'}>
-                      P{currentPlayer}
-                    </span>
-                    {' '}- {currentPlayer === 1 ? 'Move unit' : 'AI thinking...'}
-                  </>
-                ) : (
-                  <span className="text-yellow-400">COMBAT</span>
-                )}
+            <div className="bg-red-900 p-1 rounded">
+              <div className="flex justify-between text-white mb-1">
+                <span className="font-bold">P2</span>
+                <span>{units.filter(u => u.player === 2 && u.health > 0).length} units</span>
               </div>
-
-              <div className="w-16"></div>
-            </div>
-
-            {/* Game Board */}
-            <div className="flex-1 overflow-hidden relative">
-              <HexGrid />
-
-              {/* Action Buttons */}
-              {selectedUnit && gamePhase === 'action' && selectedUnit.player === 1 && currentPlayer === 1 && !activatedUnits.has(selectedUnit.id) && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-gray-800 rounded-lg p-2 border border-gray-600">
-                  <button
-                    onClick={handlePass}
-                    className="px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-500 active:bg-gray-600"
-                  >
-                    Pass
-                  </button>
-
-                  <button
-                    onClick={() => setShowUnitInfo(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg border border-blue-500 active:bg-blue-700"
-                  >
-                    ℹ️ Info
-                  </button>
-
-                  {/* Ability Buttons */}
-                  {config.unitTypes[selectedUnit.type].abilities &&
-                    config.unitTypes[selectedUnit.type].abilities.map(abilityId => {
-                      const ability = ABILITIES[abilityId];
-                      if (!ability) return null;
-
-                      const canUse = ability.type === 'active' && ability.canUse ? ability.canUse(selectedUnit, {}) : false;
-                      const state = selectedUnit.abilityStates?.[abilityId];
-
-                      return (
-                        <button
-                          key={abilityId}
-                          onClick={() => handleAbilityClick(abilityId)}
-                          disabled={!canUse || ability.type === 'passive'}
-                          className={`px-3 py-2 rounded-lg border text-sm font-semibold transition-all ${canUse && ability.type === 'active'
-                              ? 'bg-blue-600 border-blue-500 text-white hover:bg-blue-700 active:bg-blue-800'
-                              : 'bg-gray-700 border-gray-600 text-gray-400 cursor-not-allowed'
-                            }`}
-                          title={ability.description}
-                        >
-                          {ability.icon} {ability.name}
-                          {state && state.charges !== null && (
-                            <span className="ml-1 text-xs">({state.charges}/{ability.maxCharges})</span>
-                          )}
-                          {state && state.cooldown > 0 && (
-                            <span className="ml-1 text-xs">(CD:{state.cooldown})</span>
-                          )}
-                          {ability.type === 'passive' && (
-                            <span className="ml-1 text-xs">(Passive)</span>
-                          )}
-                        </button>
-                      );
-                    })}
+              <div className="flex items-center gap-1">
+                <div className="flex-1 bg-gray-700 rounded h-2">
+                  <div
+                    className="bg-red-400 h-full"
+                    style={{ width: `${(capitalShips.player2?.currentHealth / capitalShips.player2?.health * 100) || 0}%` }}
+                  ></div>
                 </div>
-              )}
-
-              {/* Info Only Button (for enemy units, activated units, or during AI turn) */}
-              {selectedUnit && (
-                (selectedUnit.player !== 1 || currentPlayer !== 1 || activatedUnits.has(selectedUnit.id)) &&
-                gamePhase === 'action' && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-                    <button
-                      onClick={() => setShowUnitInfo(true)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg border border-blue-500 active:bg-blue-700"
-                    >
-                      ℹ️ Info
-                    </button>
-                  </div>
-                )
-              )}
-            </div>
-
-            {/* Bottom Status Bar */}
-            <div className="grid grid-cols-2 gap-1 p-1 bg-gray-900 text-xs flex-shrink-0">
-              <div className="bg-blue-900 p-1 rounded">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-blue-300 font-bold">P1</span>
-                  <span className="text-white">{units.filter(u => u.player === 1 && u.health > 0).length} units</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="flex-1 bg-gray-700 rounded h-2 overflow-hidden">
-                    <div
-                      className="bg-blue-400 h-full transition-all"
-                      style={{ width: `${(capitalShips.player1?.currentHealth / capitalShips.player1?.health * 100) || 0}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-white text-[10px]">{capitalShips.player1?.currentHealth || 0}</span>
-                </div>
-              </div>
-              <div className="bg-red-900 p-1 rounded">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-red-300 font-bold">P2</span>
-                  <span className="text-white">{units.filter(u => u.player === 2 && u.health > 0).length} units</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="flex-1 bg-gray-700 rounded h-2 overflow-hidden">
-                    <div
-                      className="bg-red-400 h-full transition-all"
-                      style={{ width: `${(capitalShips.player2?.currentHealth / capitalShips.player2?.health * 100) || 0}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-white text-[10px]">{capitalShips.player2?.currentHealth || 0}</span>
-                </div>
+                <span className="text-white text-[10px]">{capitalShips.player2?.currentHealth || 0}</span>
               </div>
             </div>
           </div>
-
-          {/* Unit Info Modal */}
-          {showUnitInfo && selectedUnit && (
-            <UnitInfoModal
-              unit={selectedUnit}
-              onClose={() => setShowUnitInfo(false)}
-            />
-          )}
 
           {/* Combat Log Modal */}
           {showCombatLog && (
-            <CombatLogModal
-              entries={combatLogEntries}
-              onClose={handleCombatLogOk}
-            />
+            <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+              <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4 border-4 border-yellow-500 max-h-[80vh] flex flex-col">
+                <h2 className="text-3xl font-bold text-yellow-400 text-center mb-4">⚔️ COMBAT LOG ⚔️</h2>
+
+                <div className="flex-1 overflow-y-auto bg-gray-800 rounded p-4 mb-4 font-mono text-sm text-white">
+                  {combatLog.map((line, i) => (
+                    <div key={i} className="mb-1">{line}</div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleCombatLogOk}
+                  className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl font-bold rounded-lg"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Unit Info Modal */}
+          {showUnitInfo && selectedUnit && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
+              onClick={() => setShowUnitInfo(false)}
+            >
+              <div
+                className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border-4"
+                style={{ borderColor: config.players[`player${selectedUnit.player}`].color }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <img src={config.unitTypes[selectedUnit.type].icon} alt="" className="w-16 h-16" />
+                  <div>
+                    <h2 className="text-2xl font-bold text-white">{config.unitTypes[selectedUnit.type].name}</h2>
+                    <p className="text-gray-400 text-sm">{selectedUnit.id}</p>
+                  </div>
+                </div>
+
+                <p className="text-gray-300 mb-4 italic">{config.unitTypes[selectedUnit.type].description}</p>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-gray-700 rounded p-2">
+                    <div className="text-gray-400 text-xs mb-1">Health</div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-gray-600 rounded h-3">
+                        <div
+                          className="bg-green-500 h-full"
+                          style={{ width: `${(selectedUnit.health / selectedUnit.maxHealth * 100)}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-white text-sm font-bold">{Math.round(selectedUnit.health)}/{selectedUnit.maxHealth}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-700 rounded p-2">
+                    <div className="text-gray-400 text-xs">Damage</div>
+                    <div className="text-white font-bold text-lg">{selectedUnit.damage}</div>
+                  </div>
+
+                  <div className="bg-gray-700 rounded p-2">
+                    <div className="text-gray-400 text-xs">Capital Damage</div>
+                    <div className="text-white font-bold text-lg">{selectedUnit.capitalDamage}</div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowUnitInfo(false)}
+                  className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           )}
         </div>
       );
