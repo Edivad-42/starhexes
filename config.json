@@ -125,11 +125,11 @@
     "player1": [
       { "type": "xWing", "q": 2, "r": 1 },
       { "type": "aWing", "q": 2, "r": 2 },
-      { "type": "yWing", "q": 2, "r": 3 }
+      { "type": "yWing", "q": 1, "r": 3 }
     ],
     "player2": [
       { "type": "tieF", "q": 7, "r": 4 },
-      { "type": "tieI", "q": 7, "r": 5 },
+      { "type": "tieI", "q": 6, "r": 5 },
       { "type": "tieB", "q": 6, "r": 6 }
     ]
   },
