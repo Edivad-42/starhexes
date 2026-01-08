@@ -696,15 +696,19 @@
 
               if (enemies.length === 0) return;
 
-              // Divide damage
-              let damagePerEnemy = attacker.damage / enemies.length;
+              // 1️⃣ Total attacker damage
+              let totalDamage = attacker.damage;
 
-              // Passsive bonus to attack
-              damagePerEnemy = AbilitySystem.applyPassiveAttack(
+              // 2️⃣ Apply bonus to total
+              totalDamage = AbilitySystem.applyPassiveAttack(
                 attacker,
-                damagePerEnemy,
+                totalDamage,
                 config
               );
+
+              // 3️⃣ Split damage
+              const damagePerEnemy = totalDamage / enemies.length;
+
 
               enemies.forEach(enemy => {
                 incomingDamage[enemy.id] += damagePerEnemy;
