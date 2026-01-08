@@ -779,7 +779,7 @@
                   )}
                   {selectedUnit && gamePhase === 'action' && (
                     <div className="flex gap-2 mt-2">
-                      {AbilitySystem.getAvailableAbilities(selectedUnit, config)
+                      {(AbilitySystem.getAvailableAbilities(selectedUnit, config) || [])
                         .filter(a => a.type === 'active' && a.trigger === 'attack' && a.canUse)
                         .map(ability => (
                           <button
