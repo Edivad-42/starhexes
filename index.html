@@ -760,6 +760,28 @@
           };
 
           // ==================== COMBAT EVENT FEED ====================
+          const showCombatEventsSequentially = (events) => {
+            if (events.length === 0) {
+              endCombatPhase();
+              return;
+            }
+            
+            const delay = config.ui.combatEventDelay || 600;
+            
+            events.forEach((event, index) => {
+              setTimeout(() => {
+                setCombatEvents(prev => [...prev, event]);
+                
+                // After last event, end combat phase
+                if (index === events.length - 1) {
+                  setTimeout(() => {
+                    endCombatPhase();
+                  }, delay);
+                }
+              }, index * delay);
+            });
+          };
+          
           const handleCombatLogOk = () => {
             setShowCombatLog(false);
             setCombatLogEntries([]);
