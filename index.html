@@ -890,7 +890,22 @@
                           fill={fillColor}
                           stroke={strokeColor}
                           strokeWidth={strokeWidth}
-                          onClick={() => unit ? handleUnitClick(unit) : handleHexClick(q, r)}
+                          onClick={() => {
+                            // priority: active attack ability
+                            if (activeAbility?.type === 'attack') {
+                              handleAbilityTargetClick(q, r);
+                              return;
+                            }
+
+                            // if ther's a unit, select it
+                            if (unit) {
+                              handleUnitClick(unit);
+                              return;
+                            }
+
+                            // otherwise move
+                            handleHexClick(q, r);
+                          }}
                           className="cursor-pointer hover:opacity-80 transition-opacity"
                         />
                         
