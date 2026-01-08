@@ -55,7 +55,7 @@
       "capitalDamage": 20,
       "icon": "icons/starfighters/xWing.png",
       "description": "An all-round fighter with balanced stats",
-      "abilities": []
+      "abilities": ["Proton Torpedoes"]
     },
     "aWing": {
       "name": "A-Wing",
@@ -123,14 +123,14 @@
   },
   "startingUnits": {
     "player1": [
-      { "type": "xWing", "q": 2, "r": 2 },
-      { "type": "aWing", "q": 2, "r": 3 },
-      { "type": "yWing", "q": 2, "r": 4 }
+      { "type": "xWing", "q": 2, "r": 1 },
+      { "type": "aWing", "q": 2, "r": 2 },
+      { "type": "yWing", "q": 2, "r": 3 }
     ],
     "player2": [
-      { "type": "tieF", "q": 6, "r": 3 },
-      { "type": "tieI", "q": 6, "r": 4 },
-      { "type": "tieB", "q": 6, "r": 5 }
+      { "type": "tieF", "q": 7, "r": 4 },
+      { "type": "tieI", "q": 7, "r": 5 },
+      { "type": "tieB", "q": 6, "r": 6 }
     ]
   },
   "ui": {
