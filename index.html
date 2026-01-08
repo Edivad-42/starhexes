@@ -48,6 +48,7 @@
       const [showUnitInfo, setShowUnitInfo] = useState(false);
       const [needsAIMove, setNeedsAIMove] = useState(false);
       const [activeAbility, setActiveAbility] = useState(null);
+      const [winner, setWinner] = useState(null);
 
       const unitsRef = useRef(units);
       const capitalShipsRef = useRef(capitalShips);
@@ -269,6 +270,23 @@
         setCurrentPlayer(1);
       };
 
+      // ==================== VICTORY CONDITIONS ====================
+      const checkVictory = (units, capitalShips) => {
+        const p1UnitsAlive = units.some(u => u.player === 1 && u.health > 0);
+        const p2UnitsAlive = units.some(u => u.player === 2 && u.health > 0);
+
+        if (!p1UnitsAlive || capitalShips.player1.currentHealth <= 0) {
+          return 2;
+        }
+
+        if (!p2UnitsAlive || capitalShips.player2.currentHealth <= 0) {
+          return 1;
+        }
+
+        return null;
+      };
+
+
       // ==================== COMBAT RESOLUTION ====================
       const resolveCombat = () => {
         console.log('=== COMBAT START ===');
@@ -373,6 +391,10 @@
         setCombatLog(log);
         setShowCombatLog(true);
         setGamePhase('combat');
+        const victory = checkVictory(updatedUnits, newCapitalShips);
+        if (victory) {
+          setWinner(victory);
+        }
       };
 
       const handleCombatLogOk = () => {
@@ -452,15 +474,23 @@
         const ability = ABILITIES[abilityId];
         const result = ability.onUse(unit, [q, r]);
 
-        // applica danno diretto
-        setUnits(prev =>
-          prev.map(u =>
-            u.q === q && u.r === r
-              ? { ...u, health: Math.max(0, u.health - result.damage) }
-              : u
-          )
+        // calcola nuovo stato unità UNA SOLA VOLTA
+        const updatedUnits = unitsRef.current.map(u =>
+          u.q === q && u.r === r
+            ? { ...u, health: Math.max(0, u.health - result.damage) }
+            : u
         );
 
+        setUnits(updatedUnits);
+
+        // check vittoria
+        const victory = checkVictory(updatedUnits, capitalShipsRef.current);
+        if (victory) {
+          setWinner(victory);
+          return;
+        }
+
+        // chiudi modalità abilità
         setActiveAbility(null);
       };
 
@@ -721,6 +751,27 @@
                   className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
                 >
                   Close
+                </button>
+              </div>
+            </div>
+          )}
+
+          {winner && (
+            <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+              <div className="bg-gray-900 border-4 border-yellow-500 rounded-xl p-8 text-center">
+                <h1 className="text-4xl font-bold text-yellow-400 mb-4">
+                  🏆 PLAYER {winner} WINS!
+                </h1>
+                <p className="text-gray-300 mb-6">
+                  {winner === 1
+                    ? 'The enemy fleet has been destroyed.'
+                    : 'Your fleet has been annihilated.'}
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl rounded-lg"
+                >
+                  Restart Game
                 </button>
               </div>
             </div>
