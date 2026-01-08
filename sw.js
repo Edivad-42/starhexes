@@ -5,8 +5,6 @@ const urlsToCache = [
   'manifest.json',
   'config.json',
   'abilities.js',
-  'menu.js',
-  'howtoplay.js'
 ];
 
 self.addEventListener('install', event => {

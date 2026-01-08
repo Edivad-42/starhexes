@@ -781,7 +781,15 @@
               }, index * delay);
             });
           };
-          
+
+          const endCombatPhase = () => {
+            setGamePhase('action');
+            setActivatedUnits(new Set());
+            setCombatEvents([]);
+            setCurrentPlayer(1);
+            setSelectedUnit(null);
+          };
+
           const handleCombatLogOk = () => {
             setShowCombatLog(false);
             setCombatLogEntries([]);
