@@ -185,7 +185,9 @@
           // ==================== VICTORY CHECK ====================
           // Check for victory conditions after combat
           useEffect(() => {
-            if (gamePhase !== 'action' || gameOver) return;
+            // Don't check victory if game hasn't started or is already over
+            if (gamePhase !== 'action' || gameOver || units.length === 0) return;
+            if (!capitalShips.player1 || !capitalShips.player2) return;
             
             const p1Units = units.filter(u => u.player === 1 && u.health > 0);
             const p2Units = units.filter(u => u.player === 2 && u.health > 0);
