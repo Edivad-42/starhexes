@@ -55,7 +55,7 @@
       "capitalDamage": 20,
       "icon": "icons/starfighters/xWing.png",
       "description": "An all-round fighter with balanced stats",
-      "abilities": ["Proton Torpedoes"]
+      "abilities": ["protonTorpedoes"]
     },
     "aWing": {
       "name": "A-Wing",
