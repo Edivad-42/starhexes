@@ -5,10 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#1e293b">
-  <meta name="description" content="Star Hexes - Tactical turn-based space game">
   <title>Star Hexes</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="icon-192.png">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -32,166 +29,6 @@
 <body>
   <div id="root"></div>
 
-   <!-- Menu and How To Play components (must be type="text/babel" for JSX) -->
-  <script type="text/babel">
-    // Main Menu Component for Star Hexes
-    const MainMenu = ({ onStartGame, onShowHowToPlay }) => {
-      return (
-        <div className="w-full h-full bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
-          <div className="text-center space-y-8 px-4">
-            {/* Title */}
-            <div>
-              <h1 className="text-6xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-2">
-                STAR HEXES
-              </h1>
-              <p className="text-gray-400 text-lg tracking-widest">TACTICAL SPACE COMBAT</p>
-            </div>
-
-            {/* Main Buttons */}
-            <div className="space-y-4">
-              <button
-                onClick={onStartGame}
-                className="w-64 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-xl font-bold rounded-lg shadow-lg hover:shadow-blue-500/50 transition-all transform hover:scale-105 active:scale-95"
-              >
-                🎯 Quick Match
-              </button>
-
-              <button
-                onClick={onShowHowToPlay}
-                className="w-64 px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white text-xl font-bold rounded-lg shadow-lg hover:shadow-purple-500/50 transition-all transform hover:scale-105 active:scale-95"
-              >
-                📖 How to Play
-              </button>
-
-              {/* Coming Soon Buttons */}
-              <button
-                disabled
-                className="w-64 px-8 py-4 bg-gray-700 text-gray-500 text-xl font-bold rounded-lg cursor-not-allowed opacity-50"
-              >
-                🎮 Campaign <span className="text-sm">(Coming Soon)</span>
-              </button>
-
-              <button
-                disabled
-                className="w-64 px-8 py-4 bg-gray-700 text-gray-500 text-xl font-bold rounded-lg cursor-not-allowed opacity-50"
-              >
-                ⚙️ Settings <span className="text-sm">(Coming Soon)</span>
-              </button>
-            </div>
-
-            {/* Version Info */}
-            <div className="text-gray-500 text-sm mt-8">
-              v0.1.0 Alpha
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    // How to Play Component for Star Hexes
-    const HowToPlay = ({ onBack }) => {
-      return (
-        <div className="w-full h-full bg-gray-900 overflow-auto">
-          <div className="max-w-3xl mx-auto p-6 text-white">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                How to Play
-              </h1>
-              <button
-                onClick={onBack}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
-              >
-                ← Back to Menu
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="space-y-6 text-gray-300">
-
-              {/* Goal */}
-              <section className="bg-gray-800 rounded-lg p-4">
-                <h2 className="text-xl font-bold text-blue-400 mb-2">🎯 Goal</h2>
-                <p>
-                  Win by destroying the enemy Capital Ship (reduce it to 0 HP) OR by eliminating all enemy units.
-                </p>
-              </section>
-
-              {/* Turn Structure */}
-              <section className="bg-gray-800 rounded-lg p-4">
-                <h2 className="text-xl font-bold text-blue-400 mb-2">🔄 Turn Structure</h2>
-                <p className="mb-2">The game alternates between <strong>Action Phase</strong> and <strong>Combat Phase</strong>:</p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li><strong>Action Phase:</strong> Players take turns activating their units. Each unit can move once per round.</li>
-                  <li><strong>Combat Phase:</strong> After all units are activated, simultaneous combat occurs between adjacent enemy units.</li>
-                </ul>
-              </section>
-
-              {/* Movement & Engagement */}
-              <section className="bg-gray-800 rounded-lg p-4">
-                <h2 className="text-xl font-bold text-blue-400 mb-2">🚀 Movement & Engagement</h2>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Units can move to any adjacent hex (1 hex per turn by default).</li>
-                  <li><strong>Engaged Units:</strong> If a unit is adjacent to an enemy, it is <strong>engaged</strong> and <strong>cannot move</strong>.</li>
-                  <li>You can choose to <strong>Pass</strong> without moving if needed.</li>
-                </ul>
-              </section>
-
-              {/* Combat */}
-              <section className="bg-gray-800 rounded-lg p-4">
-                <h2 className="text-xl font-bold text-blue-400 mb-2">⚔️ Combat</h2>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Combat happens automatically during the Combat Phase.</li>
-                  <li>Units deal damage to all adjacent enemies simultaneously.</li>
-                  <li>If a unit has multiple adjacent enemies, its damage is split evenly among them.</li>
-                  <li>Combat events appear in the feed at the top of the screen.</li>
-                </ul>
-              </section>
-
-              {/* Abilities */}
-              <section className="bg-gray-800 rounded-lg p-4">
-                <h2 className="text-xl font-bold text-blue-400 mb-2">⚡ Abilities</h2>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li><strong>Active Abilities:</strong> Can be triggered by clicking the ability button when a unit is selected. Some abilities have limited charges or cooldowns.</li>
-                  <li><strong>Movement Abilities:</strong> Replace your normal movement (e.g., Boost lets you move 2 hexes instead of 1).</li>
-                  <li><strong>Attack Abilities:</strong> Allow ranged attacks or special effects. You can still move after using these.</li>
-                  <li><strong>Passive Abilities:</strong> Always active and provide constant bonuses (shown as disabled buttons for reference).</li>
-                  <li>Click the <strong>ℹ️ Info</strong> button to see details about any unit's abilities.</li>
-                </ul>
-              </section>
-
-              {/* Capital Ships */}
-              <section className="bg-gray-800 rounded-lg p-4">
-                <h2 className="text-xl font-bold text-blue-400 mb-2">🛡️ Capital Ships</h2>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Each player has a Capital Ship in their home zone (3 hexes highlighted in blue or red).</li>
-                  <li>Capital Ships don't move but have high HP.</li>
-                  <li>Units in the enemy's capital zone can damage the Capital Ship if they're not engaged with enemy units.</li>
-                  <li>The amount of damage depends on the unit's <strong>Capital Damage</strong> stat.</li>
-                </ul>
-              </section>
-
-              {/* Tips */}
-              <section className="bg-gray-800 rounded-lg p-4">
-                <h2 className="text-xl font-bold text-blue-400 mb-2">💡 Tips</h2>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Use the Info button to inspect any unit (yours or enemy) to see their stats and abilities.</li>
-                  <li>Plan your moves carefully - engaged units can't retreat!</li>
-                  <li>Different unit types excel at different roles: fighters for combat, bombers for capital ships.</li>
-                  <li>Watch your ability cooldowns and charges to maximize their impact.</li>
-                </ul>
-              </section>
-
-            </div>
-
-            {/* Bottom spacing */}
-            <div className="h-8"></div>
-          </div>
-        </div>
-      );
-    };
-  </script>
-
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
@@ -207,14 +44,17 @@
       const [combatLog, setCombatLog] = useState([]);
       const [showCombatLog, setShowCombatLog] = useState(false);
       const [showUnitInfo, setShowUnitInfo] = useState(false);
+      const [needsAIMove, setNeedsAIMove] = useState(false);
 
       const unitsRef = useRef(units);
       const capitalShipsRef = useRef(capitalShips);
+      const activatedRef = useRef(activatedUnits);
 
       useEffect(() => {
         unitsRef.current = units;
         capitalShipsRef.current = capitalShips;
-      }, [units, capitalShips]);
+        activatedRef.current = activatedUnits;
+      }, [units, capitalShips, activatedUnits]);
 
       // ==================== LOAD CONFIG ====================
       useEffect(() => {
@@ -335,6 +175,59 @@
         }
       }, [activatedUnits, gamePhase, units]);
 
+      // ==================== AI TURN ====================
+      useEffect(() => {
+        if (!needsAIMove || gamePhase !== 'action' || currentPlayer !== 2) return;
+
+        const timer = setTimeout(() => {
+          makeAIMove();
+        }, 1000);
+
+        return () => clearTimeout(timer);
+      }, [needsAIMove, gamePhase, currentPlayer]);
+
+      const makeAIMove = () => {
+        setNeedsAIMove(false);
+
+        const aiUnits = unitsRef.current.filter(u => u.player === 2 && u.health > 0 && !activatedRef.current.has(u.id));
+
+        if (aiUnits.length === 0) {
+          setCurrentPlayer(1);
+          return;
+        }
+
+        const aiUnit = aiUnits[0];
+        const playerUnits = unitsRef.current.filter(u => u.player === 1 && u.health > 0);
+        const validMoves = getValidMoves(aiUnit);
+
+        // If can't move, just activate
+        if (validMoves.length === 0) {
+          setActivatedUnits(prev => new Set([...prev, aiUnit.id]));
+          setCurrentPlayer(1);
+          return;
+        }
+
+        // Simple AI: move towards nearest enemy
+        let bestMove = validMoves[0];
+        let minDistance = Infinity;
+
+        validMoves.forEach(([mq, mr]) => {
+          playerUnits.forEach(pUnit => {
+            const dist = Math.abs(mq - pUnit.q) + Math.abs(mr - pUnit.r);
+            if (dist < minDistance) {
+              minDistance = dist;
+              bestMove = [mq, mr];
+            }
+          });
+        });
+
+        setUnits(prevUnits => prevUnits.map(u =>
+          u.id === aiUnit.id ? { ...u, q: bestMove[0], r: bestMove[1] } : u
+        ));
+        setActivatedUnits(prev => new Set([...prev, aiUnit.id]));
+        setCurrentPlayer(1);
+      };
+
       // ==================== COMBAT RESOLUTION ====================
       const resolveCombat = () => {
         console.log('=== COMBAT START ===');
@@ -454,7 +347,8 @@
       // ==================== PLAYER ACTIONS ====================
       const handleUnitClick = (unit) => {
         if (gamePhase !== 'action') return;
-        if (unit.player !== 1 || currentPlayer !== 1) return;
+        if (unit.player !== currentPlayer) return;
+        if (currentPlayer !== 1) return; // Only player 1 is human
         if (activatedUnits.has(unit.id)) return;
 
         setSelectedUnit(unit);
@@ -473,6 +367,8 @@
           ));
           setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
           setSelectedUnit(null);
+          setCurrentPlayer(2);
+          setNeedsAIMove(true);
         }
       };
 
@@ -481,6 +377,8 @@
 
         setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
         setSelectedUnit(null);
+        setCurrentPlayer(2);
+        setNeedsAIMove(true);
       };
 
       // ==================== RENDERING ====================
@@ -502,9 +400,12 @@
           {/* Top Bar */}
           <div className="flex justify-center items-center py-2 bg-gray-900 text-white">
             {gamePhase === 'action' ? (
-              <span className={currentPlayer === 1 ? 'text-blue-400' : 'text-red-400'}>
-                Player {currentPlayer} - Move units
-              </span>
+              <>
+                <span className={currentPlayer === 1 ? 'text-blue-400' : 'text-red-400'}>
+                  P{currentPlayer}
+                </span>
+                {' '}- {currentPlayer === 1 ? 'Move unit' : 'AI thinking...'}
+              </>
             ) : (
               <span className="text-yellow-400">COMBAT</span>
             )}
@@ -727,26 +628,6 @@
 
     ReactDOM.render(<StarHexesGame />, document.getElementById('root'));
   </script>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
-    }
-  </script>
-
-  <style>
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-  </style>
 </body>
 
 </html>
