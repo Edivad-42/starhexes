@@ -1074,7 +1074,9 @@
                       {config.unitTypes[selectedUnit.type].abilities && 
                        config.unitTypes[selectedUnit.type].abilities.map(abilityId => {
                         const ability = ABILITIES[abilityId];
-                        const canUse = ability.canUse(selectedUnit, {});
+                        if (!ability) return null;
+                        
+                        const canUse = ability.type === 'active' && ability.canUse ? ability.canUse(selectedUnit, {}) : false;
                         const state = selectedUnit.abilityStates?.[abilityId];
                         
                         return (
