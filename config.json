@@ -55,7 +55,7 @@
       "capitalDamage": 20,
       "icon": "icons/starfighters/xWing.png",
       "description": "An all-round fighter with balanced stats",
-      "abilities": ["protonTorpedoes", "targetingComputer"]
+      "abilities": []
     },
     "aWing": {
       "name": "A-Wing",
@@ -64,7 +64,7 @@
       "capitalDamage": 10,
       "icon": "icons/starfighters/aWing.png",
       "description": "A fragile interceptor with high damage",
-      "abilities": ["doubleMove", "evasiveManeuvers"]
+      "abilities": []
     },
     "yWing": {
       "name": "Y-Wing",
@@ -73,7 +73,7 @@
       "capitalDamage": 30,
       "icon": "icons/starfighters/yWing.png",
       "description": "A resistant bomber specialized in capital ship damage",
-      "abilities": ["ionCannon", "armoredHull"]
+      "abilities": []
     },
     "tieF": {
       "name": "TIE Fighter",
@@ -82,7 +82,7 @@
       "capitalDamage": 10,
       "icon": "icons/starfighters/tieFighter.png",
       "description": "A fragile fighter with precise attacks",
-      "abilities": ["preciseShot"]
+      "abilities": []
     },
     "tieI": {
       "name": "TIE Interceptor",
@@ -91,7 +91,7 @@
       "capitalDamage": 10,
       "icon": "icons/starfighters/tieInterceptor.png",
       "description": "A fragile interceptor with evasive maneuvers",
-      "abilities": ["doubleMove", "evasiveManeuvers"]
+      "abilities": []
     },
     "tieB": {
       "name": "TIE Bomber",
@@ -100,7 +100,7 @@
       "capitalDamage": 25,
       "icon": "icons/starfighters/tieBomber.png",
       "description": "An average bomber with shields",
-      "abilities": ["shieldsUp"]
+      "abilities": []
     }
   },
   "startingUnits": {
