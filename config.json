@@ -20,13 +20,13 @@
   },
   "capitalShips": {
     "player1": {
-      "name": "Rebel Command Ship",
+      "name": "MC80",
       "health": 100,
       "type": "cruiser",
       "position": { "q": 0, "r": 1 }
     },
     "player2": {
-      "name": "Imperial Command Ship",
+      "name": "Imperial Star Destroyer",
       "health": 100,
       "type": "cruiser",
       "position": { "q": 8, "r": 6 }
@@ -75,6 +75,15 @@
       "description": "A resistant bomber specialized in capital ship damage",
       "abilities": []
     },
+    "bWing": {
+      "name": "B-Wing",
+      "health": 120,
+      "damage": 25,
+      "capitalDamage": 30,
+      "icon": "icons/starfighters/bWing.png",
+      "description": "An all-round bomber",
+      "abilities": []
+    },
     "tieF": {
       "name": "TIE Fighter",
       "health": 60,
@@ -99,7 +108,16 @@
       "damage": 15,
       "capitalDamage": 25,
       "icon": "icons/starfighters/tieBomber.png",
-      "description": "An average bomber with shields",
+      "description": "An average bomber",
+      "abilities": []
+    },
+    "alpha": {
+      "name": "Alpha Class Starwing",
+      "health": 100,
+      "damage": 20,
+      "capitalDamage": 25,
+      "icon": "icons/starfighters/alpha.png",
+      "description": "A resistent bomber",
       "abilities": []
     }
   },
