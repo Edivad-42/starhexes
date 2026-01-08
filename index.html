@@ -663,150 +663,97 @@
             setNeedsAIMove(true);
           };
 
-          const hexDistance = (a, b) => {
-            const dq = a.q - b.q;
-            const dr = a.r - b.r;
-            return Math.max(
-              Math.abs(dq),
-              Math.abs(dr),
-              Math.abs(dq + dr)
-            );
-          };
-
           // ==================== COMBAT RESOLUTION ====================
           const resolveCombat = () => {
             setGamePhase('combat');
-
             const events = [];
+            const currentUnits = [...unitsRef.current];
+            let newCapitalShips = { ...capitalShipsRef.current };
 
-            // 🔹 deep copy of units
-            const units = unitsRef.current.map(u => ({ ...u }));
-            const capitalShips = { ...capitalShipsRef.current };
-
-            // ==============================
-            // 1️⃣ SNAPSHOT
-            // ==============================
-            const snapshot = units
-              .filter(u => u.health > 0)
-              .map(u => ({
-                id: u.id,
-                q: u.q,
-                r: u.r,
-                player: u.player,
-                damage: u.damage,
-                type: u.type
-              }));
-
-            // ==============================
-            // 2️⃣ DAMAGE ACCUMULATOR
-            // ==============================
-            const incomingDamage = {};
-            snapshot.forEach(u => {
-              incomingDamage[u.id] = 0;
-            });
-
-            // ==============================
-            // 3️⃣ ATTACKS CALCULATION
-            // ==============================
-            snapshot.forEach(attacker => {
-              const attackerUnit = units.find(u => u.id === attacker.id);
-              if (!attackerUnit) return;
-
-              // Adjacent enemies
-              const enemies = snapshot.filter(
-                u =>
-                  u.player !== attacker.player &&
-                  hexDistance(attacker, u) === 1
-              );
-
-              if (enemies.length === 0) return;
-
-              // 🔸 Total unit damage
-              let totalDamage = attacker.damage;
-
-              // 🔸 Damage bonus
-              totalDamage = AbilitySystem.applyPassiveAttack(
-                attackerUnit,
-                totalDamage,
-                config
-              );
-
-              const splitDamage = totalDamage / enemies.length;
-
-              enemies.forEach(enemy => {
-                incomingDamage[enemy.id] += splitDamage;
-
-                events.push({
-                  type: 'combat',
-                  text: `${attacker.id} hits ${enemy.id} (${Math.round(splitDamage)} dmg)`
-                });
-              });
-            });
-
-            // ==============================
-            // 4️⃣ APPLY DAMAGE
-            // ==============================
-            units.forEach(unit => {
+            // Calculate all combat interactions
+            const combatPairs = new Map();
+            
+            currentUnits.forEach(unit => {
               if (unit.health <= 0) return;
-
-              const dmg = incomingDamage[unit.id] || 0;
-              if (dmg <= 0) return;
-
-              const finalDamage = AbilitySystem.applyPassiveDefense(
-                unit,
-                dmg,
-                config
-              );
-
-              unit.health = Math.max(0, unit.health - finalDamage);
-            });
-
-            // ==============================
-            // 5️⃣ CAPITAL SHIP DAMAGE
-            // ==============================
-            units.forEach(unit => {
-              if (unit.health <= 0) return;
-
-              const isInP1Zone = config.capitalZones.player1.some(
-                z => z.q === unit.q && z.r === unit.r
-              );
-              const isInP2Zone = config.capitalZones.player2.some(
-                z => z.q === unit.q && z.r === unit.r
-              );
-
-              const isEnemyZone =
-                unit.player === 1 ? isInP2Zone : isInP1Zone;
-
-              if (!isEnemyZone) return;
-
-              const engaged = snapshot.some(
-                u =>
-                  u.player !== unit.player &&
-                  hexDistance(unit, u) === 1
-              );
-
-              if (!engaged) {
-                const target = unit.player === 1 ? 'player2' : 'player1';
-                capitalShips[target].currentHealth = Math.max(
-                  0,
-                  capitalShips[target].currentHealth - unit.capitalDamage
-                );
-
-                events.push({
-                  type: 'capital',
-                  text: `${unit.id} strikes ${capitalShips[target].name} (${unit.capitalDamage} dmg)`
+              
+              const neighbors = hexUtils.getNeighbors(unit.q, unit.r);
+              const enemies = neighbors
+                .map(([q, r]) => currentUnits.find(u => u.q === q && u.r === r && u.health > 0))
+                .filter(n => n && n.player !== unit.player);
+              
+              if (enemies.length > 0) {
+                let damagePerEnemy = unit.damage / enemies.length;
+                
+                // Apply passive attack bonuses
+                damagePerEnemy = AbilitySystem.applyPassiveAttack(unit, damagePerEnemy, config);
+                
+                enemies.forEach(enemy => {
+                  const key = [unit.id, enemy.id].sort().join('-');
+                  if (!combatPairs.has(key)) {
+                    combatPairs.set(key, { unit, enemy, damage: damagePerEnemy });
+                  }
                 });
               }
             });
 
-            // ==============================
-            // 6️⃣ COOLDOWN
-            // ==============================
-            AbilitySystem.resetCooldowns(units);
+            // Apply combat damage
+            const newUnits = currentUnits.map(u => ({ ...u }));
 
-            setUnits(units);
-            setCapitalShips(capitalShips);
+            combatPairs.forEach(({ unit, enemy, damage }) => {
+              const unitIdx = newUnits.findIndex(u => u.id === unit.id);
+              const enemyIdx = newUnits.findIndex(u => u.id === enemy.id);
+              
+              if (unitIdx !== -1 && enemyIdx !== -1) {
+                // Apply passive defense to damage received
+                const modifiedDamageToUnit = AbilitySystem.applyPassiveDefense(newUnits[unitIdx], damage, config);
+                const modifiedDamageToEnemy = AbilitySystem.applyPassiveDefense(newUnits[enemyIdx], damage, config);
+                
+                newUnits[unitIdx].health = Math.max(0, newUnits[unitIdx].health - modifiedDamageToUnit);
+                newUnits[enemyIdx].health = Math.max(0, newUnits[enemyIdx].health - modifiedDamageToEnemy);
+                
+                events.push({
+                  type: 'combat',
+                  text: `${unit.id} and ${enemy.id} exchange fire (${Math.round(modifiedDamageToEnemy)}/${Math.round(modifiedDamageToUnit)} dmg)`
+                });
+              }
+            });
 
+            // Capital ship damage
+            newUnits.forEach(unit => {
+              if (unit.health <= 0) return;
+              
+              const isInP1CapitalZone = config.capitalZones.player1.some(z => z.q === unit.q && z.r === unit.r);
+              const isInP2CapitalZone = config.capitalZones.player2.some(z => z.q === unit.q && z.r === unit.r);
+              const isInEnemyCapitalZone = unit.player === 1 ? isInP2CapitalZone : isInP1CapitalZone;
+              
+              if (isInEnemyCapitalZone) {
+                const hasEnemyNeighbors = hexUtils.getNeighbors(unit.q, unit.r)
+                  .some(([q, r]) => {
+                    const n = newUnits.find(u => u.q === q && u.r === r && u.health > 0);
+                    return n && n.player !== unit.player;
+                  });
+                
+                if (!hasEnemyNeighbors) {
+                  const targetShip = unit.player === 1 ? 'player2' : 'player1';
+                  newCapitalShips[targetShip] = {
+                    ...newCapitalShips[targetShip],
+                    currentHealth: Math.max(0, newCapitalShips[targetShip]?.currentHealth - unit.capitalDamage)
+                  };
+                  events.push({
+                    type: 'capital',
+                    text: `${unit.id} strikes ${newCapitalShips[targetShip].name} (${unit.capitalDamage} dmg)`
+                  });
+                }
+              }
+            });
+
+            // Reset ability cooldowns at end of round
+            AbilitySystem.resetCooldowns(newUnits);
+
+            setUnits(newUnits);
+            setCapitalShips(newCapitalShips);
+            
+            // Show combat events sequentially
             showCombatEventsSequentially(events);
           };
 
@@ -943,22 +890,7 @@
                           fill={fillColor}
                           stroke={strokeColor}
                           strokeWidth={strokeWidth}
-                          onClick={() => {
-                            // priority: active attack ability
-                            if (activeAbility?.type === 'attack') {
-                              handleAbilityTargetClick(q, r);
-                              return;
-                            }
-
-                            // if ther's a unit, select it
-                            if (unit) {
-                              handleUnitClick(unit);
-                              return;
-                            }
-
-                            // otherwise move
-                            handleHexClick(q, r);
-                          }}
+                          onClick={() => unit ? handleUnitClick(unit) : handleHexClick(q, r)}
                           className="cursor-pointer hover:opacity-80 transition-opacity"
                         />
                         
@@ -972,16 +904,7 @@
                               fill={config.players[`player${unit.player}`].color}
                               stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
                               strokeWidth="3"
-                              onClick={() => {
-                                // Se un'abilità d'attacco è attiva, il click è un ATTACCO
-                                if (activeAbility?.type === 'attack') {
-                                  handleAbilityTargetClick(q, r);
-                                  return;
-                                }
-
-                                // Altrimenti comportamento normale
-                                handleUnitClick(unit);
-                              }}
+                              onClick={() => handleUnitClick(unit)}
                               className="cursor-pointer"
                             />
                             <UnitIcon x={x} y={y} size={24} src={config.unitTypes[unit.type].icon}/>
