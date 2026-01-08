@@ -209,8 +209,7 @@
           const [currentPlayer, setCurrentPlayer] = useState(1);
           const [selectedUnit, setSelectedUnit] = useState(null);
           const [activatedUnits, setActivatedUnits] = useState(new Set());
-          const [gamePhase, setGamePhase] = useState('action'); // 'action' or 'combat'
-          const [combatEvents, setCombatEvents] = useState([]);
+          const [gamePhase, setGamePhase] = useState('action');
           const [needsAIMove, setNeedsAIMove] = useState(false);
           
           // Ability system state
@@ -221,7 +220,7 @@
           const [showUnitInfo, setShowUnitInfo] = useState(false);
           const [showCombatLog, setShowCombatLog] = useState(false);
           const [combatLogEntries, setCombatLogEntries] = useState([]);
-          const [gameOver, setGameOver] = useState(null); // null, 'player1', or 'player2'
+          const [gameOver, setGameOver] = useState(null);
           
           // Refs for accessing state in async operations
           const unitsRef = useRef(units);
@@ -761,13 +760,12 @@
             showCombatEventsSequentially(events);
           };
 
-          // ==================== COMBAT EVENT FEED ====================
           const handleCombatLogOk = () => {
+            console.log('Combat log OK clicked');
             setShowCombatLog(false);
             setCombatLogEntries([]);
             setGamePhase('action');
             setActivatedUnits(new Set());
-            setCombatEvents([]);
             setCurrentPlayer(1);
             setSelectedUnit(null);
           };
@@ -1101,26 +1099,6 @@
                   
                   <div className="w-16"></div>
                 </div>
-                
-                {/* Combat Events Feed */}
-                {gamePhase === 'combat' && combatEvents.length > 0 && (
-                  <div className="bg-gray-800 border-b border-gray-700 px-2 py-1 flex-shrink-0">
-                    <div className="space-y-1">
-                      {combatEvents.slice(-4).map((event, i) => (
-                        <div 
-                          key={i}
-                          className="text-white text-xs animate-slide-down"
-                          style={{ 
-                            opacity: 1 - (combatEvents.length - i - 1) * 0.2,
-                            animation: 'slideDown 0.3s ease-out'
-                          }}
-                        >
-                          {event.type === 'combat' ? '⚔️' : '🎯'} {event.text}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
                 
                 {/* Game Board */}
                 <div className="flex-1 overflow-hidden relative">
