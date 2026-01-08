@@ -289,7 +289,7 @@ const AbilitySystem = {
   getAvailableAbilities: (unit, config) => {
     if (!config.unitTypes[unit.type].abilities) return [];
     
-    return config.unitTypes[unit.type].abilities.map(abilityName => {
+    const abilities = config.unitTypes[unit.type].abilities.map(abilityName => {
       const ability = ABILITIES[abilityName];
       const state = unit.abilityStates?.[abilityName];
       
@@ -300,6 +300,8 @@ const AbilitySystem = {
         canUse: ability.type === 'active' ? ability.canUse(unit, {}) : false
       };
     });
+
+    return abilities || [];
   },
   
   // Applica modificatori passivi ai danni ricevuti
