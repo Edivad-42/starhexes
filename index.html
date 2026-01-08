@@ -219,6 +219,8 @@
           
           // UI state
           const [showUnitInfo, setShowUnitInfo] = useState(false);
+          const [showCombatLog, setShowCombatLog] = useState(false);
+          const [combatLogEntries, setCombatLogEntries] = useState([]);
           const [gameOver, setGameOver] = useState(null); // null, 'player1', or 'player2'
           
           // Refs for accessing state in async operations
@@ -758,29 +760,9 @@
           };
 
           // ==================== COMBAT EVENT FEED ====================
-          const showCombatEventsSequentially = (events) => {
-            if (events.length === 0) {
-              endCombatPhase();
-              return;
-            }
-            
-            const delay = config.ui.combatEventDelay || 600;
-            
-            events.forEach((event, index) => {
-              setTimeout(() => {
-                setCombatEvents(prev => [...prev, event]);
-                
-                // After last event, end combat phase
-                if (index === events.length - 1) {
-                  setTimeout(() => {
-                    endCombatPhase();
-                  }, delay);
-                }
-              }, index * delay);
-            });
-          };
-          
-          const endCombatPhase = () => {
+          const handleCombatLogOk = () => {
+            setShowCombatLog(false);
+            setCombatLogEntries([]);
             setGamePhase('action');
             setActivatedUnits(new Set());
             setCombatEvents([]);
@@ -1027,6 +1009,60 @@
             );
           };
 
+          // ==================== COMBAT LOG MODAL ====================
+          const CombatLogModal = ({ entries, onClose }) => {
+            if (!entries || entries.length === 0) return null;
+            
+            const getEntryColor = (type) => {
+              switch(type) {
+                case 'phase': return 'text-yellow-400 font-bold';
+                case 'attack': return 'text-blue-300';
+                case 'damage': return 'text-orange-300';
+                case 'result': return 'text-green-300';
+                case 'capital': return 'text-red-400 font-semibold';
+                case 'info': return 'text-gray-400';
+                default: return 'text-white';
+              }
+            };
+            
+            return (
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div 
+                  className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4 border-4 border-yellow-500 max-h-[80vh] flex flex-col"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Header */}
+                  <div className="mb-4">
+                    <h2 className="text-3xl font-bold text-yellow-400 text-center">⚔️ COMBAT LOG ⚔️</h2>
+                  </div>
+                  
+                  {/* Scrollable Log */}
+                  <div className="flex-1 overflow-y-auto bg-gray-800 rounded p-4 mb-4 font-mono text-sm">
+                    {entries.map((entry, index) => (
+                      <div 
+                        key={index} 
+                        className={`mb-1 ${getEntryColor(entry.type)}`}
+                      >
+                        {entry.text}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* OK Button */}
+                  <button
+                    onClick={onClose}
+                    className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl font-bold rounded-lg transition-colors"
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            );
+          };
+
           // ==================== MAIN GAME RENDER ====================
           return (
             <div className="w-full h-full bg-gray-800 flex flex-col overflow-hidden">
@@ -1191,6 +1227,14 @@
                 <UnitInfoModal 
                   unit={selectedUnit} 
                   onClose={() => setShowUnitInfo(false)} 
+                />
+              )}
+              
+              {/* Combat Log Modal */}
+              {showCombatLog && (
+                <CombatLogModal 
+                  entries={combatLogEntries} 
+                  onClose={handleCombatLogOk} 
                 />
               )}
             </div>
