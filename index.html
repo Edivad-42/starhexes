@@ -414,14 +414,6 @@
           {/* Game Board */}
           <div className="flex-1 relative overflow-hidden">
             <svg width="100%" height="100%" className="bg-gray-900" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet">
-              {/* Capital ship labels */}
-              <text x="10" y="100" fill="#3b82f6" fontSize="11" fontWeight="bold" transform="rotate(-30 10 100)">
-                {config.capitalShips.player1.name}
-              </text>
-              <text x="585" y="300" fill="#ef4444" fontSize="11" fontWeight="bold" textAnchor="end" transform="rotate(-30 585 300)">
-                {config.capitalShips.player2.name}
-              </text>
-
               {/* Hexes */}
               {Array.from({ length: config.map.height }, (_, r) =>
                 Array.from({ length: config.map.width }, (_, q) => {
@@ -443,8 +435,8 @@
                   let stroke = '#475569';
                   let strokeWidth = 2;
 
-                  if (isP1Zone) { fill = '#1e3a5f'; stroke = '#3b82f6'; strokeWidth = 4; }
-                  if (isP2Zone) { fill = '#4a1a1a'; stroke = '#ef4444'; strokeWidth = 4; }
+                  if (isP1Zone) { fill = '#1e3a5f'; stroke = '#3b82f6'; strokeWidth = 5; }
+                  if (isP2Zone) { fill = '#4a1a1a'; stroke = '#ef4444'; strokeWidth = 5; }
                   if (isValidMove) fill = '#064e3b';
                   if (isSelected) fill = '#fbbf24';
 
@@ -455,6 +447,7 @@
                         fill={fill}
                         stroke={stroke}
                         strokeWidth={strokeWidth}
+                        strokeLinejoin="round"
                         onClick={() => unit ? handleUnitClick(unit) : handleHexClick(q, r)}
                         className="cursor-pointer hover:opacity-80"
                       />
@@ -513,9 +506,10 @@
 
           {/* Bottom Status */}
           <div className="grid grid-cols-2 gap-1 p-1 bg-gray-900 text-xs">
+            {/* Player 1 */}
             <div className="bg-blue-900 p-1 rounded">
               <div className="flex justify-between text-white mb-1">
-                <span className="font-bold">P1</span>
+                <span className="font-bold text-blue-300">{config.capitalShips.player1.name}</span>
                 <span>{units.filter(u => u.player === 1 && u.health > 0).length} units</span>
               </div>
               <div className="flex items-center gap-1">
@@ -528,10 +522,12 @@
                 <span className="text-white text-[10px]">{capitalShips.player1?.currentHealth || 0}</span>
               </div>
             </div>
+
+            {/* Player 2 */}
             <div className="bg-red-900 p-1 rounded">
               <div className="flex justify-between text-white mb-1">
-                <span className="font-bold">P2</span>
                 <span>{units.filter(u => u.player === 2 && u.health > 0).length} units</span>
+                <span className="font-bold text-red-300">{config.capitalShips.player2.name}</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="flex-1 bg-gray-700 rounded h-2">
