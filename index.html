@@ -678,36 +678,41 @@
             setGamePhase('combat');
 
             const events = [];
-            const currentUnits = unitsRef.current.map(u => ({ ...u }));
-            let newCapitalShips = { ...capitalShipsRef.current };
+
+            // 🔹 deep copy of units
+            const units = unitsRef.current.map(u => ({ ...u }));
+            const capitalShips = { ...capitalShipsRef.current };
 
             // ==============================
             // 1️⃣ SNAPSHOT
             // ==============================
-            const snapshot = currentUnits.map(u => ({
-              id: u.id,
-              q: u.q,
-              r: u.r,
-              player: u.player,
-              damage: u.damage,
-              type: u.type
-            }));
+            const snapshot = units
+              .filter(u => u.health > 0)
+              .map(u => ({
+                id: u.id,
+                q: u.q,
+                r: u.r,
+                player: u.player,
+                damage: u.damage,
+                type: u.type
+              }));
 
             // ==============================
             // 2️⃣ DAMAGE ACCUMULATOR
             // ==============================
             const incomingDamage = {};
-            currentUnits.forEach(u => {
-              if (u.health > 0) incomingDamage[u.id] = 0;
+            snapshot.forEach(u => {
+              incomingDamage[u.id] = 0;
             });
 
             // ==============================
             // 3️⃣ ATTACKS CALCULATION
             // ==============================
             snapshot.forEach(attacker => {
-              const realAttacker = currentUnits.find(u => u.id === attacker.id);
-              if (!realAttacker || realAttacker.health <= 0) return;
+              const attackerUnit = units.find(u => u.id === attacker.id);
+              if (!attackerUnit) return;
 
+              // Adjacent enemies
               const enemies = snapshot.filter(
                 u =>
                   u.player !== attacker.player &&
@@ -716,24 +721,24 @@
 
               if (enemies.length === 0) return;
 
-              // 🔹 total damage
+              // 🔸 Total unit damage
               let totalDamage = attacker.damage;
 
-              // 🔹 bonus damage
+              // 🔸 Damage bonus
               totalDamage = AbilitySystem.applyPassiveAttack(
-                realAttacker,
+                attackerUnit,
                 totalDamage,
                 config
               );
 
-              const damagePerEnemy = totalDamage / enemies.length;
+              const splitDamage = totalDamage / enemies.length;
 
               enemies.forEach(enemy => {
-                incomingDamage[enemy.id] += damagePerEnemy;
+                incomingDamage[enemy.id] += splitDamage;
 
                 events.push({
                   type: 'combat',
-                  text: `${attacker.id} hits ${enemy.id} (${Math.round(damagePerEnemy)} dmg)`
+                  text: `${attacker.id} hits ${enemy.id} (${Math.round(splitDamage)} dmg)`
                 });
               });
             });
@@ -741,20 +746,25 @@
             // ==============================
             // 4️⃣ APPLY DAMAGE
             // ==============================
-            currentUnits.forEach(unit => {
+            units.forEach(unit => {
               if (unit.health <= 0) return;
 
-              let dmg = incomingDamage[unit.id] || 0;
-              if (dmg > 0) {
-                dmg = AbilitySystem.applyPassiveDefense(unit, dmg, config);
-                unit.health = Math.max(0, unit.health - dmg);
-              }
+              const dmg = incomingDamage[unit.id] || 0;
+              if (dmg <= 0) return;
+
+              const finalDamage = AbilitySystem.applyPassiveDefense(
+                unit,
+                dmg,
+                config
+              );
+
+              unit.health = Math.max(0, unit.health - finalDamage);
             });
 
             // ==============================
-            // 5️⃣ CAPITAL SHIPS DAMAGE
+            // 5️⃣ CAPITAL SHIP DAMAGE
             // ==============================
-            currentUnits.forEach(unit => {
+            units.forEach(unit => {
               if (unit.health <= 0) return;
 
               const isInP1Zone = config.capitalZones.player1.some(
@@ -777,25 +787,25 @@
 
               if (!engaged) {
                 const target = unit.player === 1 ? 'player2' : 'player1';
-                newCapitalShips[target].currentHealth = Math.max(
+                capitalShips[target].currentHealth = Math.max(
                   0,
-                  newCapitalShips[target].currentHealth - unit.capitalDamage
+                  capitalShips[target].currentHealth - unit.capitalDamage
                 );
 
                 events.push({
                   type: 'capital',
-                  text: `${unit.id} strikes ${newCapitalShips[target].name} (${unit.capitalDamage} dmg)`
+                  text: `${unit.id} strikes ${capitalShips[target].name} (${unit.capitalDamage} dmg)`
                 });
               }
             });
 
             // ==============================
-            // 6️⃣ COOLDOWN (REAL UNITS)
+            // 6️⃣ COOLDOWN
             // ==============================
-            AbilitySystem.resetCooldowns(currentUnits);
+            AbilitySystem.resetCooldowns(units);
 
-            setUnits(currentUnits);
-            setCapitalShips(newCapitalShips);
+            setUnits(units);
+            setCapitalShips(capitalShips);
 
             showCombatEventsSequentially(events);
           };
