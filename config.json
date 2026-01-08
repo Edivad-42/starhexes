@@ -10,23 +10,23 @@
   },
   "players": {
     "player1": {
-      "name": "Ribelli",
+      "name": "Rebels",
       "color": "#3b82f6"
     },
     "player2": {
-      "name": "Impero",
+      "name": "Empire",
       "color": "#ef4444"
     }
   },
   "capitalShips": {
     "player1": {
-      "name": "Nave Comando Ribelle",
+      "name": "Rebel Command Ship",
       "health": 100,
       "type": "cruiser",
       "position": { "q": 0, "r": 1 }
     },
     "player2": {
-      "name": "Nave Comando Imperiale",
+      "name": "Imperial Command Ship",
       "health": 100,
       "type": "cruiser",
       "position": { "q": 8, "r": 6 }
@@ -53,48 +53,36 @@
       "health": 100,
       "damage": 30,
       "capitalDamage": 20,
-      "icon": "icons/starfighters/tieInterceptor.png",
-      "description": "An all-round fighter",
-      "color": {
-        "player1": "#3b82f6",
-        "player2": "#ef4444"
-      }
+      "icon": "icons/starfighters/xWing.png",
+      "description": "An all-round fighter with balanced stats",
+      "abilities": ["protonTorpedoes", "targetingComputer"]
     },
     "aWing": {
       "name": "A-Wing",
       "health": 60,
       "damage": 35,
       "capitalDamage": 10,
-      "icon": "icons/starfighters/tieInterceptor.png",
-      "description": "A fragile interceptor",
-      "color": {
-        "player1": "#10b981",
-        "player2": "#f59e0b"
-      }
+      "icon": "icons/starfighters/aWing.png",
+      "description": "A fragile interceptor with high damage",
+      "abilities": ["doubleMove", "evasiveManeuvers"]
     },
     "yWing": {
       "name": "Y-Wing",
       "health": 120,
       "damage": 20,
       "capitalDamage": 30,
-      "icon": "icons/starfighters/tieInterceptor.png",
-      "description": "A resistant bomber",
-      "color": {
-        "player1": "#8b5cf6",
-        "player2": "#ec4899"
-      }
+      "icon": "icons/starfighters/yWing.png",
+      "description": "A resistant bomber specialized in capital ship damage",
+      "abilities": ["ionCannon", "armoredHull"]
     },
     "tieF": {
       "name": "TIE Fighter",
       "health": 60,
       "damage": 20,
       "capitalDamage": 10,
-      "icon": "icons/starfighters/tieInterceptor.png",
-      "description": "A fragile fighter",
-      "color": {
-        "player1": "#3b82f6",
-        "player2": "#ef4444"
-      }
+      "icon": "icons/starfighters/tieFighter.png",
+      "description": "A fragile fighter with precise attacks",
+      "abilities": ["preciseShot"]
     },
     "tieI": {
       "name": "TIE Interceptor",
@@ -102,23 +90,17 @@
       "damage": 35,
       "capitalDamage": 10,
       "icon": "icons/starfighters/tieInterceptor.png",
-      "description": "A fragile interceptor",
-      "color": {
-        "player1": "#10b981",
-        "player2": "#f59e0b"
-      }
+      "description": "A fragile interceptor with evasive maneuvers",
+      "abilities": ["doubleMove", "evasiveManeuvers"]
     },
     "tieB": {
       "name": "TIE Bomber",
       "health": 90,
       "damage": 15,
       "capitalDamage": 25,
-      "icon": "icons/starfighters/tieInterceptor.png",
-      "description": "An average bomber",
-      "color": {
-        "player1": "#8b5cf6",
-        "player2": "#ec4899"
-      }
+      "icon": "icons/starfighters/tieBomber.png",
+      "description": "An average bomber with shields",
+      "abilities": ["shieldsUp"]
     }
   },
   "startingUnits": {
@@ -136,6 +118,7 @@
   "ui": {
     "showHealthNumbers": true,
     "animationSpeed": 1000,
-    "combatLogDuration": 3000
+    "combatLogDuration": 3000,
+    "combatEventDelay": 600
   }
 }
