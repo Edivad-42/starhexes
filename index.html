@@ -316,7 +316,8 @@
           // ==================== CHECK ALL UNITS ACTIVATED ====================
           // When all units are activated, trigger combat phase
           useEffect(() => {
-            if (gamePhase !== 'action') return;
+            // Don't check if already in combat or if combat log is showing
+            if (gamePhase !== 'action' || showCombatLog) return;
             
             const aliveUnits = units.filter(u => u.health > 0);
             if (aliveUnits.length === 0) return;
@@ -324,9 +325,10 @@
             const allActivated = aliveUnits.every(u => activatedUnits.has(u.id));
             
             if (allActivated) {
+              console.log('ALL UNITS ACTIVATED - STARTING COMBAT');
               resolveCombat();
             }
-          }, [activatedUnits, gamePhase]);
+          }, [activatedUnits, gamePhase, showCombatLog]);
 
           // ==================== AI MOVE TRIGGER ====================
           // Trigger AI move when it's AI's turn
@@ -760,36 +762,6 @@
           };
 
           // ==================== COMBAT EVENT FEED ====================
-          const showCombatEventsSequentially = (events) => {
-            if (events.length === 0) {
-              endCombatPhase();
-              return;
-            }
-            
-            const delay = config.ui.combatEventDelay || 600;
-            
-            events.forEach((event, index) => {
-              setTimeout(() => {
-                setCombatEvents(prev => [...prev, event]);
-                
-                // After last event, end combat phase
-                if (index === events.length - 1) {
-                  setTimeout(() => {
-                    endCombatPhase();
-                  }, delay);
-                }
-              }, index * delay);
-            });
-          };
-
-          const endCombatPhase = () => {
-            setGamePhase('action');
-            setActivatedUnits(new Set());
-            setCombatEvents([]);
-            setCurrentPlayer(1);
-            setSelectedUnit(null);
-          };
-
           const handleCombatLogOk = () => {
             setShowCombatLog(false);
             setCombatLogEntries([]);
@@ -1041,7 +1013,12 @@
 
           // ==================== COMBAT LOG MODAL ====================
           const CombatLogModal = ({ entries, onClose }) => {
-            if (!entries || entries.length === 0) return null;
+            console.log('CombatLogModal render - entries:', entries?.length);
+            
+            if (!entries || entries.length === 0) {
+              console.log('No entries - returning null');
+              return null;
+            }
             
             const getEntryColor = (type) => {
               switch(type) {
@@ -1054,6 +1031,8 @@
                 default: return 'text-white';
               }
             };
+            
+            console.log('Rendering combat log modal with', entries.length, 'entries');
             
             return (
               <div 
