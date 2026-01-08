@@ -663,6 +663,16 @@
             setNeedsAIMove(true);
           };
 
+          const hexDistance = (a, b) => {
+            const dq = a.q - b.q;
+            const dr = a.r - b.r;
+            return Math.max(
+              Math.abs(dq),
+              Math.abs(dr),
+              Math.abs(dq + dr)
+            );
+          };
+
           // ==================== COMBAT RESOLUTION ====================
           const resolveCombat = () => {
             setGamePhase('combat');
@@ -672,43 +682,51 @@
             let newCapitalShips = { ...capitalShipsRef.current };
 
             // ==============================
-            // 1️⃣ DAMAGE ACCUMULATOR
+            // 1️⃣ SNAPSHOT
+            // ==============================
+            const snapshot = currentUnits.map(u => ({
+              id: u.id,
+              q: u.q,
+              r: u.r,
+              player: u.player,
+              damage: u.damage,
+              type: u.type
+            }));
+
+            // ==============================
+            // 2️⃣ DAMAGE ACCUMULATOR
             // ==============================
             const incomingDamage = {};
             currentUnits.forEach(u => {
-              if (u.health > 0) {
-                incomingDamage[u.id] = 0;
-              }
+              if (u.health > 0) incomingDamage[u.id] = 0;
             });
 
             // ==============================
-            // 2️⃣ CALCULATE ATTACKS
+            // 3️⃣ ATTACKS CALCULATION
             // ==============================
-            currentUnits.forEach(attacker => {
-              if (attacker.health <= 0) return;
+            snapshot.forEach(attacker => {
+              const realAttacker = currentUnits.find(u => u.id === attacker.id);
+              if (!realAttacker || realAttacker.health <= 0) return;
 
-              const neighbors = hexUtils.getNeighbors(attacker.q, attacker.r);
-              const enemies = neighbors
-                .map(([q, r]) =>
-                  currentUnits.find(u => u.q === q && u.r === r && u.health > 0)
-                )
-                .filter(u => u && u.player !== attacker.player);
+              const enemies = snapshot.filter(
+                u =>
+                  u.player !== attacker.player &&
+                  hexDistance(attacker, u) === 1
+              );
 
               if (enemies.length === 0) return;
 
-              // 1️⃣ Total attacker damage
+              // 🔹 total damage
               let totalDamage = attacker.damage;
 
-              // 2️⃣ Apply bonus to total
+              // 🔹 bonus damage
               totalDamage = AbilitySystem.applyPassiveAttack(
-                attacker,
+                realAttacker,
                 totalDamage,
                 config
               );
 
-              // 3️⃣ Split damage
               const damagePerEnemy = totalDamage / enemies.length;
-
 
               enemies.forEach(enemy => {
                 incomingDamage[enemy.id] += damagePerEnemy;
@@ -721,12 +739,12 @@
             });
 
             // ==============================
-            // 3️⃣ Apply damage
+            // 4️⃣ APPLY DAMAGE
             // ==============================
             currentUnits.forEach(unit => {
               if (unit.health <= 0) return;
 
-              let dmg = incomingDamage[unit.id];
+              let dmg = incomingDamage[unit.id] || 0;
               if (dmg > 0) {
                 dmg = AbilitySystem.applyPassiveDefense(unit, dmg, config);
                 unit.health = Math.max(0, unit.health - dmg);
@@ -734,48 +752,45 @@
             });
 
             // ==============================
-            // 4️⃣ Damage to Capital Ships
+            // 5️⃣ CAPITAL SHIPS DAMAGE
             // ==============================
             currentUnits.forEach(unit => {
               if (unit.health <= 0) return;
 
-              const isInP1CapitalZone = config.capitalZones.player1.some(
+              const isInP1Zone = config.capitalZones.player1.some(
                 z => z.q === unit.q && z.r === unit.r
               );
-              const isInP2CapitalZone = config.capitalZones.player2.some(
+              const isInP2Zone = config.capitalZones.player2.some(
                 z => z.q === unit.q && z.r === unit.r
               );
 
-              const isInEnemyCapitalZone =
-                unit.player === 1 ? isInP2CapitalZone : isInP1CapitalZone;
+              const isEnemyZone =
+                unit.player === 1 ? isInP2Zone : isInP1Zone;
 
-              if (!isInEnemyCapitalZone) return;
+              if (!isEnemyZone) return;
 
-              const hasEnemyNeighbors = hexUtils
-                .getNeighbors(unit.q, unit.r)
-                .some(([q, r]) => {
-                  const n = currentUnits.find(
-                    u => u.q === q && u.r === r && u.health > 0
-                  );
-                  return n && n.player !== unit.player;
-                });
+              const engaged = snapshot.some(
+                u =>
+                  u.player !== unit.player &&
+                  hexDistance(unit, u) === 1
+              );
 
-              if (!hasEnemyNeighbors) {
-                const targetShip = unit.player === 1 ? 'player2' : 'player1';
-                newCapitalShips[targetShip].currentHealth = Math.max(
+              if (!engaged) {
+                const target = unit.player === 1 ? 'player2' : 'player1';
+                newCapitalShips[target].currentHealth = Math.max(
                   0,
-                  newCapitalShips[targetShip].currentHealth - unit.capitalDamage
+                  newCapitalShips[target].currentHealth - unit.capitalDamage
                 );
 
                 events.push({
                   type: 'capital',
-                  text: `${unit.id} strikes ${newCapitalShips[targetShip].name} (${unit.capitalDamage} dmg)`
+                  text: `${unit.id} strikes ${newCapitalShips[target].name} (${unit.capitalDamage} dmg)`
                 });
               }
             });
 
             // ==============================
-            // 5️⃣ COOLDOWN
+            // 6️⃣ COOLDOWN (REAL UNITS)
             // ==============================
             AbilitySystem.resetCooldowns(currentUnits);
 
