@@ -8,6 +8,7 @@
   <title>Star Hexes</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="abilities.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -45,6 +46,7 @@
       const [showCombatLog, setShowCombatLog] = useState(false);
       const [showUnitInfo, setShowUnitInfo] = useState(false);
       const [needsAIMove, setNeedsAIMove] = useState(false);
+      const [activeAbility, setActiveAbility] = useState(null);
 
       const unitsRef = useRef(units);
       const capitalShipsRef = useRef(capitalShips);
@@ -79,7 +81,7 @@
 
             data.startingUnits.player1.forEach(u => {
               const unitType = data.unitTypes[u.type];
-              initialUnits.push({
+              const unit = {
                 id: `p1_${unitId++}`,
                 player: 1,
                 q: u.q,
@@ -89,13 +91,16 @@
                 type: u.type,
                 damage: unitType.damage,
                 capitalDamage: unitType.capitalDamage
-              });
+              };
+
+              AbilitySystem.initAbilities(unit, unitType.abilities || []);
+              initialUnits.push(unit);
             });
 
             unitId = 1;
             data.startingUnits.player2.forEach(u => {
               const unitType = data.unitTypes[u.type];
-              initialUnits.push({
+              const unit = {
                 id: `p2_${unitId++}`,
                 player: 2,
                 q: u.q,
@@ -105,7 +110,10 @@
                 type: u.type,
                 damage: unitType.damage,
                 capitalDamage: unitType.capitalDamage
-              });
+              };
+
+              AbilitySystem.initAbilities(unit, unitType.abilities || []);
+              initialUnits.push(unit);
             });
 
             setUnits(initialUnits);
@@ -355,7 +363,11 @@
       };
 
       const handleHexClick = (q, r) => {
-        if (!selectedUnit || gamePhase !== 'action' || currentPlayer !== 1) return;
+        if (activeAbility) {
+          handleAbilityTarget(q, r);
+          return;
+        }
+
         if (activatedUnits.has(selectedUnit.id)) return;
 
         const validMoves = getValidMoves(selectedUnit);
@@ -379,6 +391,44 @@
         setSelectedUnit(null);
         setCurrentPlayer(2);
         setNeedsAIMove(true);
+      };
+
+      const activateAbility = (unit, abilityId) => {
+        const ability = ABILITIES[abilityId];
+
+        const result = ability.effect(
+          unit,
+          { config, getUnitAt },
+          { getNeighbors }
+        );
+
+        setActiveAbility({
+          unitId: unit.id,
+          abilityId,
+          validTargets: result.targetHexes
+        });
+      };
+
+      const handleAbilityTarget = (q, r) => {
+        if (!activeAbility) return;
+
+        const { unitId, abilityId } = activeAbility;
+        const unit = unitsRef.current.find(u => u.id === unitId);
+        if (!unit) return;
+
+        const ability = ABILITIES[abilityId];
+        const result = ability.onUse(unit, [q, r]);
+
+        // applica danno diretto
+        setUnits(prev =>
+          prev.map(u =>
+            u.q === q && u.r === r
+              ? { ...u, health: Math.max(0, u.health - result.damage) }
+              : u
+          )
+        );
+
+        setActiveAbility(null);
       };
 
       // ==================== RENDERING ====================
@@ -425,8 +475,16 @@
                   const unit = units.find(u => u.q === q && u.r === r && u.health > 0);
                   const isSelected = selectedUnit && selectedUnit.q === q && selectedUnit.r === r;
 
-                  const validMoves = selectedUnit && !activatedUnits.has(selectedUnit.id) ? getValidMoves(selectedUnit) : [];
+                  const validMoves =
+                    selectedUnit &&
+                      !activatedUnits.has(selectedUnit.id) &&
+                      !activeAbility
+                      ? getValidMoves(selectedUnit)
+                      : [];
+
                   const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
+
+                  const isAbilityTarget = activeAbility && activeAbility.validTargets.some(([aq, ar]) => aq === q && ar === r);
 
                   const isP1Zone = config.capitalZones.player1.some(z => z.q === q && z.r === r);
                   const isP2Zone = config.capitalZones.player2.some(z => z.q === q && z.r === r);
@@ -439,6 +497,7 @@
                   if (isP2Zone) { fill = '#4a1a1a'; stroke = '#ef4444'; strokeWidth = 5; }
                   if (isValidMove) fill = '#064e3b';
                   if (isSelected) fill = '#fbbf24';
+                  if (isAbilityTarget) fill = '#7f1d1d';
 
                   return (
                     <g key={`${q}-${r}`}>
@@ -500,6 +559,21 @@
                 <button onClick={() => setShowUnitInfo(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg">
                   ℹ️ Info
                 </button>
+              </div>
+            )}
+            {selectedUnit && gamePhase === 'action' && (
+              <div className="flex gap-2 mt-2">
+                {AbilitySystem.getAvailableAbilities(selectedUnit, config)
+                  .filter(a => a.type === 'active' && a.trigger === 'attack' && a.canUse)
+                  .map(ability => (
+                    <button
+                      key={ability.id}
+                      onClick={() => activateAbility(selectedUnit, ability.id)}
+                      className="px-3 py-2 bg-purple-700 text-white rounded"
+                    >
+                      {ability.icon} {ability.name}
+                    </button>
+                  ))}
               </div>
             )}
           </div>
