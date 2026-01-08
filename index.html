@@ -919,7 +919,16 @@
                               fill={config.players[`player${unit.player}`].color}
                               stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
                               strokeWidth="3"
-                              onClick={() => handleUnitClick(unit)}
+                              onClick={() => {
+                                // Se un'abilità d'attacco è attiva, il click è un ATTACCO
+                                if (activeAbility?.type === 'attack') {
+                                  handleAbilityTargetClick(q, r);
+                                  return;
+                                }
+
+                                // Altrimenti comportamento normale
+                                handleUnitClick(unit);
+                              }}
                               className="cursor-pointer"
                             />
                             <UnitIcon x={x} y={y} size={24} src={config.unitTypes[unit.type].icon}/>
