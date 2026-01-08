@@ -35,6 +35,7 @@
 
     const StarHexesGame = () => {
       // ==================== STATE ====================
+      const [gameState, setGameState] = useState('menu');
       const [config, setConfig] = useState(null);
       const [units, setUnits] = useState([]);
       const [capitalShips, setCapitalShips] = useState({ player1: null, player2: null });
@@ -120,6 +121,38 @@
           })
           .catch(err => console.error('Error loading config:', err));
       }, []);
+
+      // ==================== MENU HANDLERS ====================
+      const handleStartGame = () => {
+        setGameState('game');
+      };
+
+      const handleShowHowToPlay = () => {
+        setGameState('howtoplay');
+      };
+
+      const handleBackToMenu = () => {
+        setGameState('menu');
+      };
+
+      // ==================== LOADING STATE ====================
+      if (!config) {
+        return (
+          <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+            <div className="text-white text-xl">Loading...</div>
+          </div>
+        );
+      }
+
+      // ==================== MENU RENDER ====================
+      if (gameState === 'menu') {
+        return <MainMenu onStartGame={handleStartGame} onShowHowToPlay={handleShowHowToPlay} />;
+      }
+
+      // ==================== HOW TO PLAY RENDER ====================
+      if (gameState === 'howtoplay') {
+        return <HowToPlay onBack={handleBackToMenu} />;
+      }
 
       // ==================== HEX UTILITIES ====================
       // Offset coordinates: even rows shift right
