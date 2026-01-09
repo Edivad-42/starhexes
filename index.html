@@ -665,6 +665,14 @@
       };
 
       const activateAbility = (unit, abilityId) => {
+        const ability = ABILITIES[abilityId];
+        if (!ability) return;
+
+        // BLOCCO: se non usabile, non fare nulla
+        if (!ability.canUse(unit, { config, getUnitAt, isOccupied })) {
+          return;
+        }
+
         // toggle off
         if (
           activeAbility &&
@@ -675,10 +683,6 @@
           return;
         }
 
-        const ability = ABILITIES[abilityId];
-        if (!ability) return;
-
-        // usa EFFECT, non getTargets
         const result = ability.effect(
           unit,
           {
@@ -706,6 +710,7 @@
         const ability = ABILITIES[abilityId];
         const result = ability.onUse(unit, { q, r });
 
+        // aggiorna danni
         if (result?.damage) {
           setUnits(prev =>
             prev.map(u =>
@@ -715,6 +720,15 @@
             )
           );
         }
+
+        // 🔥 FORZA REACT A VEDERE IL CAMBIAMENTO DI CARICHE
+        setUnits(prev =>
+          prev.map(u =>
+            u.id === unit.id
+              ? { ...u, abilityStates: { ...u.abilityStates } }
+              : u
+          )
+        );
 
         setActiveAbility(null);
       };
@@ -770,21 +784,28 @@
                 .filter(a => a.type === 'active')
                 .map(ability => {
                   const active = activeAbility?.abilityId === ability.id;
+                  const canUse = ability.canUse(selectedUnit, gameStateForAbilities);
+
 
                   return (
                     <button
                       key={ability.id}
-                      disabled={isActivated}
+                      disabled={isActivated || !canUse}
                       onClick={() => activateAbility(selectedUnit, ability.id)}
-                      className={`w-full px-3 py-2 rounded text-white
-                  ${isActivated
-                          ? 'bg-gray-600 opacity-40'
-                          : active
-                            ? 'bg-yellow-600'
-                            : 'bg-purple-700 hover:bg-purple-800'}
-                `}
+                      className={`w-full px-3 py-2 rounded text-white ${(!canUse || isActivated)
+                        ? 'bg-gray-600 opacity-40 cursor-not-allowed'
+                        : active
+                          ? 'bg-yellow-600'
+                          : 'bg-purple-700 hover:bg-purple-800'}
+`}
+
                     >
                       {ability.icon} {ability.name}
+                      {ability.state?.charges !== null && (
+                        <span className="ml-2 text-xs opacity-80">
+                          ({ability.state.charges})
+                        </span>
+                      )}
                     </button>
                   );
                 })}
