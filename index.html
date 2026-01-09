@@ -638,6 +638,8 @@
           return;
         }
 
+        if (!selectedUnit || selectedUnit.player !== currentPlayer) return;
+
         if (activatedUnits.has(selectedUnit.id)) return;
 
         const validMoves = getValidMoves(selectedUnit);
@@ -656,6 +658,8 @@
 
       const handlePass = () => {
         if (!selectedUnit || activatedUnits.has(selectedUnit.id)) return;
+
+        if (selectedUnit.player !== currentPlayer) return;
 
         setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
         setSelectedUnit(null);
@@ -780,6 +784,7 @@
 
                         const validMoves =
                           selectedUnit &&
+                            selectedUnit.player === currentPlayer &&
                             !activatedUnits.has(selectedUnit.id) &&
                             !activeAbility
                             ? getValidMoves(selectedUnit)
@@ -860,41 +865,55 @@
                         );
                       })
                     )}
+                  </svg>
 
-                    {/* Action Buttons */}
-                    {liveSelectedUnit && liveSelectedUnit.player === currentPlayer && gamePhase === 'action' && (
-                      <div className="flex gap-2 mt-2">
-                        {AbilitySystem.getAvailableAbilities(liveSelectedUnit, gameStateForAbilities)
-                          .filter(a => a.type === 'active' && a.trigger === 'attack')
-                          .map(ability => {
-                            const isDisabled = activatedUnits.has(liveSelectedUnit.id);
-
-                            return (
-                              <button
-                                key={ability.id}
-                                disabled={isDisabled}
-                                onClick={() => activateAbility(liveSelectedUnit, ability.id)}
-                                className={`px-3 py-2 rounded text-white ${isDisabled
-                                  ? 'bg-gray-600 opacity-40'
-                                  : activeAbility?.abilityId === ability.id
-                                    ? 'bg-yellow-600'
-                                    : 'bg-purple-700 hover:bg-purple-800'}`}
-                              >
-                                {ability.icon} {ability.name}
-                              </button>
-                            );
-                          })}
-                      </div>
-                    )}
-                    {liveSelectedUnit && (
+                  {/* Action Buttons - FUORI dall'SVG */}
+                  {liveSelectedUnit && gamePhase === 'action' && (
+                    <div className="bg-gray-800 p-2 flex flex-wrap gap-2 justify-center border-t-2 border-gray-700">
                       <button
                         onClick={() => setShowUnitInfo(true)}
-                        className="px-3 py-2 rounded bg-gray-700 hover:bg-gray-600 text-white"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold"
                       >
                         ℹ️ Info
                       </button>
-                    )}
-                  </svg>
+
+                      {liveSelectedUnit.player === currentPlayer && (
+                        <>
+                          <button
+                            onClick={handlePass}
+                            disabled={activatedUnits.has(liveSelectedUnit.id)}
+                            className={`px-4 py-2 rounded text-white font-bold ${activatedUnits.has(liveSelectedUnit.id)
+                              ? 'bg-gray-600 opacity-40'
+                              : 'bg-gray-700 hover:bg-gray-600'
+                              }`}
+                          >
+                            ⏭️ Pass
+                          </button>
+
+                          {AbilitySystem.getAvailableAbilities(liveSelectedUnit, gameStateForAbilities)
+                            .filter(a => a.type === 'active' && a.trigger === 'attack')
+                            .map(ability => {
+                              const isDisabled = activatedUnits.has(liveSelectedUnit.id);
+                              return (
+                                <button
+                                  key={ability.id}
+                                  disabled={isDisabled}
+                                  onClick={() => activateAbility(liveSelectedUnit, ability.id)}
+                                  className={`px-4 py-2 rounded text-white font-bold ${isDisabled
+                                    ? 'bg-gray-600 opacity-40'
+                                    : activeAbility?.abilityId === ability.id
+                                      ? 'bg-yellow-600 hover:bg-yellow-700'
+                                      : 'bg-purple-700 hover:bg-purple-800'
+                                    }`}
+                                >
+                                  {ability.icon} {ability.name}
+                                </button>
+                              );
+                            })}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Bottom Status */}
