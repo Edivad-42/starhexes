@@ -617,12 +617,20 @@
 
       // ==================== PLAYER ACTIONS ====================
       const handleUnitClick = (unit) => {
-        if (gamePhase !== 'action') return;
-        if (unit.player !== currentPlayer) return;
-        if (currentPlayer !== 1) return; // Only player 1 is human
-        if (activatedUnits.has(unit.id)) return;
+        // Se abilità attiva e target valido → usa abilità
+        if (
+          activeAbility &&
+          activeAbility.validTargets.some(
+            ([q, r]) => q === unit.q && r === unit.r
+          )
+        ) {
+          handleAbilityTarget(unit.q, unit.r);
+          return;
+        }
 
+        // Selezione normale: UI + logica
         setSelectedUnit(unit);
+        setLiveSelectedUnit(unit);
       };
 
       const handleHexClick = (q, r) => {
@@ -657,18 +665,25 @@
       };
 
       const activateAbility = (unit, abilityId) => {
-        const ability = ABILITIES[abilityId];
+        // Toggle: se è già attiva → deseleziona
+        if (
+          activeAbility &&
+          activeAbility.unitId === unit.id &&
+          activeAbility.abilityId === abilityId
+        ) {
+          setActiveAbility(null);
+          return;
+        }
 
-        const result = ability.effect(
-          unit,
-          { config, getUnitAt },
-          { getNeighbors }
-        );
+        const ability = ABILITIES[abilityId];
+        if (!ability) return;
+
+        const result = ability.effect(unit, gameStateRef.current, hexUtils);
 
         setActiveAbility({
           unitId: unit.id,
           abilityId,
-          validTargets: result.targetHexes
+          validTargets: result.targetHexes || []
         });
       };
 
@@ -682,7 +697,6 @@
         const ability = ABILITIES[abilityId];
         const result = ability.onUse(unit, [q, r]);
 
-        // calcola nuovo stato unità UNA SOLA VOLTA
         const updatedUnits = unitsRef.current.map(u =>
           u.q === q && u.r === r
             ? { ...u, health: Math.max(0, u.health - result.damage) }
@@ -690,16 +704,10 @@
         );
 
         setUnits(updatedUnits);
-
-        // check vittoria
-        const victory = checkVictory(updatedUnits, capitalShipsRef.current);
-        if (victory) {
-          setWinner(victory);
-          return;
-        }
-
-        // chiudi modalità abilità
         setActiveAbility(null);
+
+        const victory = checkVictory(updatedUnits, capitalShipsRef.current);
+        if (victory) setWinner(victory);
       };
 
       // ==================== RENDERING ====================
@@ -799,7 +807,16 @@
                               stroke={stroke}
                               strokeWidth={strokeWidth}
                               strokeLinejoin="round"
-                              onClick={() => unit ? handleUnitClick(unit) : handleHexClick(q, r)}
+                              onClick={() => {
+                                if (unit) {
+                                  handleUnitClick(unit);
+                                } else if (activeAbility) {
+                                  // click su hex vuoto mentre abilità attiva → niente
+                                  return;
+                                } else {
+                                  handleHexClick(q, r);
+                                }
+                              }}
                               className="cursor-pointer hover:opacity-80"
                             />
 
@@ -843,32 +860,31 @@
                   </svg>
 
                   {/* Action Buttons */}
-                  {selectedUnit && !activatedUnits.has(selectedUnit.id) && gamePhase === 'action' && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-wrap gap-2 justify-center max-w-xl">
-                      <button onClick={handlePass} className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600">
-                        Pass
-                      </button>
-                      <button onClick={() => setShowUnitInfo(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        ℹ️ Info
-                      </button>
+                  {liveSelectedUnit && liveSelectedUnit.player === currentPlayer && gamePhase === 'action' && (
+                    <div className="flex gap-2 mt-2">
+                      {AbilitySystem.getAvailableAbilities(liveSelectedUnit, config)
+                        .filter(a => a.type === 'active' && a.trigger === 'attack')
+                        .map(ability => {
+                          const isDisabled = activatedUnits.has(liveSelectedUnit.id);
 
-                      {/* Ability Buttons */}
-                      {liveSelectedUnit && AbilitySystem.getAvailableAbilities(liveSelectedUnit, gameStateForAbilities)
-                        .filter(a => a.type === 'active' && a.trigger === 'attack' && a.canUse)
-                        .map(ability => (
-                          <button
-                            key={ability.id}
-                            onClick={() => activateAbility(liveSelectedUnit, ability.id)}
-                            className="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold"
-                          >
-                            {ability.icon} {ability.name}
-                            {ability.state && ability.state.charges !== null && (
-                              <span className="ml-1 text-xs">({ability.state.charges}/{ability.maxCharges})</span>
-                            )}
-                          </button>
-                        ))}
+                          return (
+                            <button
+                              key={ability.id}
+                              disabled={isDisabled}
+                              onClick={() => activateAbility(liveSelectedUnit, ability.id)}
+                              className={`px-3 py-2 rounded text-white ${isDisabled
+                                ? 'bg-gray-600 opacity-40'
+                                : activeAbility?.abilityId === ability.id
+                                  ? 'bg-yellow-600'
+                                  : 'bg-purple-700 hover:bg-purple-800'}`}
+                            >
+                              {ability.icon} {ability.name}
+                            </button>
+                          );
+                        })}
                     </div>
                   )}
+
                 </div>
 
                 {/* Bottom Status */}
