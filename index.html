@@ -617,7 +617,7 @@
 
       // ==================== PLAYER ACTIONS ====================
       const handleUnitClick = (unit) => {
-        // Se abilità attiva e target valido → usa abilità
+        // Se abilità attiva e il target è valido → usa abilità
         if (
           activeAbility &&
           activeAbility.validTargets.some(
@@ -628,9 +628,9 @@
           return;
         }
 
-        // Selezione normale: UI + logica
+        // SEMPRE selezionabile (amico, nemico, attivato)
         setSelectedUnit(unit);
-        setLiveSelectedUnit(unit);
+        setShowUnitInfo(true);
       };
 
       const handleHexClick = (q, r) => {
@@ -665,7 +665,7 @@
       };
 
       const activateAbility = (unit, abilityId) => {
-        // Toggle: se è già attiva → deseleziona
+        // toggle off
         if (
           activeAbility &&
           activeAbility.unitId === unit.id &&
@@ -678,12 +678,16 @@
         const ability = ABILITIES[abilityId];
         if (!ability) return;
 
-        const result = ability.effect(unit, gameStateRef.current, hexUtils);
+        const result = ability.getTargets(unit, {
+          getUnitAt,
+          isOccupied,
+          config
+        });
 
         setActiveAbility({
           unitId: unit.id,
           abilityId,
-          validTargets: result.targetHexes || []
+          validTargets: result || []
         });
       };
 
@@ -695,19 +699,19 @@
         if (!unit) return;
 
         const ability = ABILITIES[abilityId];
-        const result = ability.onUse(unit, [q, r]);
+        const result = ability.onUse(unit, { q, r });
 
-        const updatedUnits = unitsRef.current.map(u =>
-          u.q === q && u.r === r
-            ? { ...u, health: Math.max(0, u.health - result.damage) }
-            : u
-        );
+        if (result?.damage) {
+          setUnits(prev =>
+            prev.map(u =>
+              u.q === q && u.r === r
+                ? { ...u, health: Math.max(0, u.health - result.damage) }
+                : u
+            )
+          );
+        }
 
-        setUnits(updatedUnits);
         setActiveAbility(null);
-
-        const victory = checkVictory(updatedUnits, capitalShipsRef.current);
-        if (victory) setWinner(victory);
       };
 
       // ==================== RENDERING ====================
