@@ -867,8 +867,8 @@
                     )}
                   </svg>
 
-                  {/* Action Buttons - FUORI dall'SVG */}
-                  {liveSelectedUnit && gamePhase === 'action' && (
+                  {/* Action Buttons */}
+                  {selectedUnit && gamePhase === 'action' && (
                     <div className="bg-gray-800 p-2 flex flex-wrap gap-2 justify-center border-t-2 border-gray-700">
                       <button
                         onClick={() => setShowUnitInfo(true)}
@@ -877,12 +877,12 @@
                         ℹ️ Info
                       </button>
 
-                      {liveSelectedUnit.player === currentPlayer && (
+                      {selectedUnit.player === currentPlayer && (
                         <>
                           <button
                             onClick={handlePass}
-                            disabled={activatedUnits.has(liveSelectedUnit.id)}
-                            className={`px-4 py-2 rounded text-white font-bold ${activatedUnits.has(liveSelectedUnit.id)
+                            disabled={activatedUnits.has(selectedUnit.id)}
+                            className={`px-4 py-2 rounded text-white font-bold ${activatedUnits.has(selectedUnit.id)
                               ? 'bg-gray-600 opacity-40'
                               : 'bg-gray-700 hover:bg-gray-600'
                               }`}
@@ -890,15 +890,15 @@
                             ⏭️ Pass
                           </button>
 
-                          {AbilitySystem.getAvailableAbilities(liveSelectedUnit, gameStateForAbilities)
+                          {AbilitySystem.getAvailableAbilities(selectedUnit, gameStateForAbilities)
                             .filter(a => a.type === 'active' && a.trigger === 'attack')
                             .map(ability => {
-                              const isDisabled = activatedUnits.has(liveSelectedUnit.id);
+                              const isDisabled = activatedUnits.has(selectedUnit.id);
                               return (
                                 <button
                                   key={ability.id}
                                   disabled={isDisabled}
-                                  onClick={() => activateAbility(liveSelectedUnit, ability.id)}
+                                  onClick={() => activateAbility(selectedUnit, ability.id)}
                                   className={`px-4 py-2 rounded text-white font-bold ${isDisabled
                                     ? 'bg-gray-600 opacity-40'
                                     : activeAbility?.abilityId === ability.id
