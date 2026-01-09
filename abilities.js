@@ -286,11 +286,11 @@ const AbilitySystem = {
     },
 
     // Ottieni abilità disponibili per un'unità
-    getAvailableAbilities: (unit, config) => {
-        if (!config.unitTypes[unit.type].abilities) return [];
+    getAvailableAbilities: (unit, gameState) => {
+        if (!gameState.config.unitTypes[unit.type].abilities) return [];
         if (!unit.abilityStates) return [];
 
-        return config.unitTypes[unit.type].abilities.map(abilityName => {
+        return gameState.config.unitTypes[unit.type].abilities.map(abilityName => {
             const ability = ABILITIES[abilityName];
             const state = unit.abilityStates[abilityName];
 
@@ -299,7 +299,7 @@ const AbilitySystem = {
                 ...ability,
                 state,
                 canUse: ability.type === 'active'
-                    ? ability.canUse(unit, { config })
+                    ? ability.canUse(unit, gameState)
                     : false
             };
         });

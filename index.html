@@ -643,6 +643,11 @@
       const liveSelectedUnit = selectedUnit
         ? units.find(u => u.id === selectedUnit.id)
         : null;
+      const gameStateForAbilities = {
+        config,
+        getUnitAt,
+        isOccupied,
+      };
 
       return (
         <>
@@ -782,7 +787,7 @@
                   )}
                   {liveSelectedUnit && gamePhase === 'action' && (
                     <div className="flex gap-2 mt-2">
-                      {AbilitySystem.getAvailableAbilities(liveSelectedUnit, config)
+                      {AbilitySystem.getAvailableAbilities(liveSelectedUnit, gameStateForAbilities)
                         .filter(a => a.type === 'active' && a.trigger === 'attack' && a.canUse)
                         .map(ability => (
                           <button
