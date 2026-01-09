@@ -784,27 +784,23 @@
                 .filter(a => a.type === 'active')
                 .map(ability => {
                   const active = activeAbility?.abilityId === ability.id;
-                  const canUse = AbilitySystem.canUseAbility(
-                    selectedUnit,
-                    ability.id,
-                    gameStateForAbilities
-                  );
+                  const noCharges = ability.state?.charges !== undefined && ability.state.charges <= 0;
 
                   return (
                     <button
                       key={ability.id}
-                      disabled={isActivated || !canUse}
+                      disabled={isActivated || noCharges}
                       onClick={() => activateAbility(selectedUnit, ability.id)}
-                      className={`w-full px-3 py-2 rounded text-white ${(!canUse || isActivated)
-                        ? 'bg-gray-600 opacity-40 cursor-not-allowed'
-                        : active
-                          ? 'bg-yellow-600'
-                          : 'bg-purple-700 hover:bg-purple-800'}
-`}
-
+                      className={`w-full px-3 py-2 rounded text-white
+            ${(isActivated || noCharges)
+                          ? 'bg-gray-600 opacity-40 cursor-not-allowed'
+                          : active
+                            ? 'bg-yellow-600'
+                            : 'bg-purple-700 hover:bg-purple-800'}
+          `}
                     >
                       {ability.icon} {ability.name}
-                      {ability.state?.charges !== null && (
+                      {ability.state?.charges !== undefined && (
                         <span className="ml-2 text-xs opacity-80">
                           ({ability.state.charges})
                         </span>
