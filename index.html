@@ -887,7 +887,14 @@
                         })}
                     </div>
                   )}
-
+                  {liveSelectedUnit && (
+                    <button
+                      onClick={() => setShowUnitInfo(true)}
+                      className="px-3 py-2 rounded bg-gray-700 hover:bg-gray-600 text-white"
+                    >
+                      ℹ️ Info
+                    </button>
+                  )}
                 </div>
 
                 {/* Bottom Status */}
