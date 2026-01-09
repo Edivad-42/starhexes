@@ -314,6 +314,56 @@
         setGameState('menu');
       };
 
+      // ==================== CUSTOM GAME ====================
+      const startCustomGame = () => {
+        const units = [];
+        let id = 1;
+
+        customSetup.player1.forEach((type, i) => {
+          const def = config.unitTypes[type];
+          const spawn = DEFAULT_SPAWNS.player1[i];
+
+          const unit = {
+            id: `p1_${id++}`,
+            player: 1,
+            type,
+            q: spawn.q,
+            r: spawn.r,
+            health: def.health,
+            maxHealth: def.health,
+            damage: def.damage,
+            capitalDamage: def.capitalDamage
+          };
+
+          AbilitySystem.initAbilities(unit, def.abilities || []);
+          units.push(unit);
+        });
+
+        id = 1;
+        customSetup.player2.forEach((type, i) => {
+          const def = config.unitTypes[type];
+          const spawn = DEFAULT_SPAWNS.player2[i];
+
+          const unit = {
+            id: `p2_${id++}`,
+            player: 2,
+            type,
+            q: spawn.q,
+            r: spawn.r,
+            health: def.health,
+            maxHealth: def.health,
+            damage: def.damage,
+            capitalDamage: def.capitalDamage
+          };
+
+          AbilitySystem.initAbilities(unit, def.abilities || []);
+          units.push(unit);
+        });
+
+        setUnits(units);
+        setGameState('game');
+      };
+
       // ==================== HEX UTILITIES ====================
       // Offset coordinates: even rows shift right
       const getNeighbors = (q, r) => {
@@ -443,56 +493,6 @@
         }
 
         return null;
-      };
-
-      // ==================== CUSTOM GAME ====================
-      const startCustomGame = () => {
-        const units = [];
-        let id = 1;
-
-        customSetup.player1.forEach((type, i) => {
-          const def = config.unitTypes[type];
-          const spawn = DEFAULT_SPAWNS.player1[i];
-
-          const unit = {
-            id: `p1_${id++}`,
-            player: 1,
-            type,
-            q: spawn.q,
-            r: spawn.r,
-            health: def.health,
-            maxHealth: def.health,
-            damage: def.damage,
-            capitalDamage: def.capitalDamage
-          };
-
-          AbilitySystem.initAbilities(unit, def.abilities || []);
-          units.push(unit);
-        });
-
-        id = 1;
-        customSetup.player2.forEach((type, i) => {
-          const def = config.unitTypes[type];
-          const spawn = DEFAULT_SPAWNS.player2[i];
-
-          const unit = {
-            id: `p2_${id++}`,
-            player: 2,
-            type,
-            q: spawn.q,
-            r: spawn.r,
-            health: def.health,
-            maxHealth: def.health,
-            damage: def.damage,
-            capitalDamage: def.capitalDamage
-          };
-
-          AbilitySystem.initAbilities(unit, def.abilities || []);
-          units.push(unit);
-        });
-
-        setUnits(units);
-        setGameState('game');
       };
 
       // ==================== COMBAT RESOLUTION ====================
