@@ -784,8 +784,11 @@
                 .filter(a => a.type === 'active')
                 .map(ability => {
                   const active = activeAbility?.abilityId === ability.id;
-                  const canUse = ability.canUse(selectedUnit, gameStateForAbilities);
-
+                  const canUse = AbilitySystem.canUseAbility(
+                    selectedUnit,
+                    ability.id,
+                    gameStateForAbilities
+                  );
 
                   return (
                     <button
