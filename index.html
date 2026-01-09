@@ -860,41 +860,41 @@
                         );
                       })
                     )}
+
+                    {/* Action Buttons */}
+                    {liveSelectedUnit && liveSelectedUnit.player === currentPlayer && gamePhase === 'action' && (
+                      <div className="flex gap-2 mt-2">
+                        {AbilitySystem.getAvailableAbilities(liveSelectedUnit, gameStateForAbilities)
+                          .filter(a => a.type === 'active' && a.trigger === 'attack')
+                          .map(ability => {
+                            const isDisabled = activatedUnits.has(liveSelectedUnit.id);
+
+                            return (
+                              <button
+                                key={ability.id}
+                                disabled={isDisabled}
+                                onClick={() => activateAbility(liveSelectedUnit, ability.id)}
+                                className={`px-3 py-2 rounded text-white ${isDisabled
+                                  ? 'bg-gray-600 opacity-40'
+                                  : activeAbility?.abilityId === ability.id
+                                    ? 'bg-yellow-600'
+                                    : 'bg-purple-700 hover:bg-purple-800'}`}
+                              >
+                                {ability.icon} {ability.name}
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
+                    {liveSelectedUnit && (
+                      <button
+                        onClick={() => setShowUnitInfo(true)}
+                        className="px-3 py-2 rounded bg-gray-700 hover:bg-gray-600 text-white"
+                      >
+                        ℹ️ Info
+                      </button>
+                    )}
                   </svg>
-
-                  {/* Action Buttons */}
-                  {liveSelectedUnit && liveSelectedUnit.player === currentPlayer && gamePhase === 'action' && (
-                    <div className="flex gap-2 mt-2">
-                      {AbilitySystem.getAvailableAbilities(liveSelectedUnit, gameStateForAbilities)
-                        .filter(a => a.type === 'active' && a.trigger === 'attack')
-                        .map(ability => {
-                          const isDisabled = activatedUnits.has(liveSelectedUnit.id);
-
-                          return (
-                            <button
-                              key={ability.id}
-                              disabled={isDisabled}
-                              onClick={() => activateAbility(liveSelectedUnit, ability.id)}
-                              className={`px-3 py-2 rounded text-white ${isDisabled
-                                ? 'bg-gray-600 opacity-40'
-                                : activeAbility?.abilityId === ability.id
-                                  ? 'bg-yellow-600'
-                                  : 'bg-purple-700 hover:bg-purple-800'}`}
-                            >
-                              {ability.icon} {ability.name}
-                            </button>
-                          );
-                        })}
-                    </div>
-                  )}
-                  {liveSelectedUnit && (
-                    <button
-                      onClick={() => setShowUnitInfo(true)}
-                      className="px-3 py-2 rounded bg-gray-700 hover:bg-gray-600 text-white"
-                    >
-                      ℹ️ Info
-                    </button>
-                  )}
                 </div>
 
                 {/* Bottom Status */}
@@ -1033,105 +1033,107 @@
                   </div>
                 )}
               </div>
-            </div>
+            </div >
           )}
 
-          {config && gameState === 'custom' && (
-            <div className="w-full h-full bg-gray-900 text-white flex flex-col items-center p-6">
-              <h1 className="text-3xl font-bold text-purple-400 mb-6">
-                Custom Match
-              </h1>
+          {
+            config && gameState === 'custom' && (
+              <div className="w-full h-full bg-gray-900 text-white flex flex-col items-center p-6">
+                <h1 className="text-3xl font-bold text-purple-400 mb-6">
+                  Custom Match
+                </h1>
 
-              <div className="grid grid-cols-2 gap-8 w-full max-w-5xl">
+                <div className="grid grid-cols-2 gap-8 w-full max-w-5xl">
 
-                {/* PLAYER */}
-                <div className="bg-gray-800 rounded-lg p-4 border border-blue-500">
-                  <h2 className="text-xl font-bold text-blue-400 mb-2">
-                    Player Units ({customSetup.player1.length}/3)
-                  </h2>
+                  {/* PLAYER */}
+                  <div className="bg-gray-800 rounded-lg p-4 border border-blue-500">
+                    <h2 className="text-xl font-bold text-blue-400 mb-2">
+                      Player Units ({customSetup.player1.length}/3)
+                    </h2>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.keys(config.unitTypes).map(type => {
-                      const unit = config.unitTypes[type];
-                      const disabled = customSetup.player1.length >= 3;
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.keys(config.unitTypes).map(type => {
+                        const unit = config.unitTypes[type];
+                        const disabled = customSetup.player1.length >= 3;
 
-                      return (
-                        <button
-                          key={type}
-                          disabled={disabled}
-                          onClick={() =>
-                            setCustomSetup(s => ({
-                              ...s,
-                              player1: [...s.player1, type]
-                            }))
-                          }
-                          className={`flex items-center gap-2 p-2 rounded
+                        return (
+                          <button
+                            key={type}
+                            disabled={disabled}
+                            onClick={() =>
+                              setCustomSetup(s => ({
+                                ...s,
+                                player1: [...s.player1, type]
+                              }))
+                            }
+                            className={`flex items-center gap-2 p-2 rounded
                   ${disabled ? 'bg-gray-700 opacity-40' : 'bg-gray-700 hover:bg-blue-600'}
                 `}
-                        >
-                          <img src={unit.icon} alt="" className="w-6 h-6" />
-                          <span className="text-sm">{unit.name}</span>
-                        </button>
-                      );
-                    })}
+                          >
+                            <img src={unit.icon} alt="" className="w-6 h-6" />
+                            <span className="text-sm">{unit.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
 
-                {/* CPU */}
-                <div className="bg-gray-800 rounded-lg p-4 border border-red-500">
-                  <h2 className="text-xl font-bold text-red-400 mb-2">
-                    CPU Units ({customSetup.player2.length}/3)
-                  </h2>
+                  {/* CPU */}
+                  <div className="bg-gray-800 rounded-lg p-4 border border-red-500">
+                    <h2 className="text-xl font-bold text-red-400 mb-2">
+                      CPU Units ({customSetup.player2.length}/3)
+                    </h2>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.keys(config.unitTypes).map(type => {
-                      const unit = config.unitTypes[type];
-                      const disabled = customSetup.player2.length >= 3;
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.keys(config.unitTypes).map(type => {
+                        const unit = config.unitTypes[type];
+                        const disabled = customSetup.player2.length >= 3;
 
-                      return (
-                        <button
-                          key={type}
-                          disabled={disabled}
-                          onClick={() =>
-                            setCustomSetup(s => ({
-                              ...s,
-                              player2: [...s.player2, type]
-                            }))
-                          }
-                          className={`flex items-center gap-2 p-2 rounded
+                        return (
+                          <button
+                            key={type}
+                            disabled={disabled}
+                            onClick={() =>
+                              setCustomSetup(s => ({
+                                ...s,
+                                player2: [...s.player2, type]
+                              }))
+                            }
+                            className={`flex items-center gap-2 p-2 rounded
                   ${disabled ? 'bg-gray-700 opacity-40' : 'bg-gray-700 hover:bg-red-600'}
                 `}
-                        >
-                          <img src={unit.icon} alt="" className="w-6 h-6" />
-                          <span className="text-sm">{unit.name}</span>
-                        </button>
-                      );
-                    })}
+                          >
+                            <img src={unit.icon} alt="" className="w-6 h-6" />
+                            <span className="text-sm">{unit.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* START */}
-              <button
-                disabled={customSetup.player1.length !== 3 || customSetup.player2.length !== 3}
-                onClick={startCustomGame}
-                className={`mt-8 px-8 py-4 rounded-lg text-xl font-bold
+                {/* START */}
+                <button
+                  disabled={customSetup.player1.length !== 3 || customSetup.player2.length !== 3}
+                  onClick={startCustomGame}
+                  className={`mt-8 px-8 py-4 rounded-lg text-xl font-bold
         ${customSetup.player1.length === 3 && customSetup.player2.length === 3
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-gray-600 opacity-40 cursor-not-allowed'}
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-gray-600 opacity-40 cursor-not-allowed'}
       `}
-              >
-                Start Match
-              </button>
+                >
+                  Start Match
+                </button>
 
-              <button
-                onClick={() => setGameState('menu')}
-                className="mt-4 text-gray-400 hover:text-white underline"
-              >
-                Back to Menu
-              </button>
-            </div>
-          )}
+                <button
+                  onClick={() => setGameState('menu')}
+                  className="mt-4 text-gray-400 hover:text-white underline"
+                >
+                  Back to Menu
+                </button>
+              </div>
+            )
+          }
         </>
       );
     };
