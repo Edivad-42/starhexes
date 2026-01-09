@@ -33,7 +33,7 @@
   <!-- Menu and How To Play components -->
   <script type="text/babel">
     // Main Menu Component for Star Hexes
-    const MainMenu = ({ onStartGame, onShowHowToPlay }) => {
+    const MainMenu = ({ onStartGame, onShowHowToPlay, onCustomMatch }) => {
       return (
         <div className="w-full h-full bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center">
           <div className="text-center space-y-8 px-4">
@@ -63,8 +63,8 @@
 
               {/* Coming Soon Buttons */}
               <button
-                onClick={() => setGameState('custom')}
-                className="px-6 py-3 bg-purple-600 text-white rounded-lg"
+                onClick={onCustomMatch}
+                className="w-64 px-8 py-4 bg-green-600 hover:bg-green-700 text-white text-xl font-bold rounded-lg shadow-lg hover:shadow-purple-500/50 transition-all transform hover:scale-105 active:scale-95"
               >
                 Custom Match
               </button>
@@ -728,6 +728,7 @@
             <MainMenu
               onStartGame={handleStartGame}
               onShowHowToPlay={handleShowHowToPlay}
+              onCustomMatch={() => setGameState('custom')}
             />
           )}
 
