@@ -617,7 +617,7 @@
 
       // ==================== PLAYER ACTIONS ====================
       const handleUnitClick = (unit) => {
-        // Se abilità attiva e il target è valido → usa abilità
+        // Se abilità attiva e target valido → usa abilità
         if (
           activeAbility &&
           activeAbility.validTargets.some(
@@ -628,9 +628,8 @@
           return;
         }
 
-        // SEMPRE selezionabile (amico, nemico, attivato)
+        // Seleziona SEMPRE (amici o nemici)
         setSelectedUnit(unit);
-        setShowUnitInfo(true);
       };
 
       const handleHexClick = (q, r) => {
