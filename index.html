@@ -63,11 +63,12 @@
 
               {/* Coming Soon Buttons */}
               <button
-                disabled
-                className="w-64 px-8 py-4 bg-gray-700 text-gray-500 text-xl font-bold rounded-lg cursor-not-allowed opacity-50"
+                onClick={() => setGameState('custom')}
+                className="px-6 py-3 bg-purple-600 text-white rounded-lg"
               >
-                🎮 Campaign <span className="text-sm">(Coming Soon)</span>
+                Custom Match
               </button>
+
 
               <button
                 disabled
@@ -196,6 +197,10 @@
     const StarHexesGame = () => {
       // ==================== STATE ====================
       const [gameState, setGameState] = useState('menu');
+      const [customSetup, setCustomSetup] = useState({
+        player1: [],
+        player2: []
+      });
       const [config, setConfig] = useState(null);
       const [units, setUnits] = useState([]);
       const [capitalShips, setCapitalShips] = useState({ player1: null, player2: null });
@@ -213,6 +218,19 @@
       const unitsRef = useRef(units);
       const capitalShipsRef = useRef(capitalShips);
       const activatedRef = useRef(activatedUnits);
+
+      const DEFAULT_SPAWNS = {
+        player1: [
+          { q: 2, r: 1 },
+          { q: 2, r: 2 },
+          { q: 1, r: 3 }
+        ],
+        player2: [
+          { q: 7, r: 4 },
+          { q: 6, r: 5 },
+          { q: 6, r: 6 }
+        ]
+      };
 
       useEffect(() => {
         unitsRef.current = units;
@@ -427,6 +445,55 @@
         return null;
       };
 
+      // ==================== CUSTOM GAME ====================
+      const startCustomGame = () => {
+        const units = [];
+        let id = 1;
+
+        customSetup.player1.forEach((type, i) => {
+          const def = config.unitTypes[type];
+          const spawn = DEFAULT_SPAWNS.player1[i];
+
+          const unit = {
+            id: `p1_${id++}`,
+            player: 1,
+            type,
+            q: spawn.q,
+            r: spawn.r,
+            health: def.health,
+            maxHealth: def.health,
+            damage: def.damage,
+            capitalDamage: def.capitalDamage
+          };
+
+          AbilitySystem.initAbilities(unit, def.abilities || []);
+          units.push(unit);
+        });
+
+        id = 1;
+        customSetup.player2.forEach((type, i) => {
+          const def = config.unitTypes[type];
+          const spawn = DEFAULT_SPAWNS.player2[i];
+
+          const unit = {
+            id: `p2_${id++}`,
+            player: 2,
+            type,
+            q: spawn.q,
+            r: spawn.r,
+            health: def.health,
+            maxHealth: def.health,
+            damage: def.damage,
+            capitalDamage: def.capitalDamage
+          };
+
+          AbilitySystem.initAbilities(unit, def.abilities || []);
+          units.push(unit);
+        });
+
+        setUnits(units);
+        setGameState('game');
+      };
 
       // ==================== COMBAT RESOLUTION ====================
       const resolveCombat = () => {
@@ -939,6 +1006,52 @@
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {gameState === 'custom' && (
+            <div className="p-6 text-white">
+              <h2 className="text-2xl mb-4">Custom Match</h2>
+
+              <h3>Player Units</h3>
+              {Object.keys(config.unitTypes).map(type => (
+                <button
+                  key={type}
+                  disabled={customSetup.player1.length >= 3}
+                  onClick={() =>
+                    setCustomSetup(s => ({
+                      ...s,
+                      player1: [...s.player1, type]
+                    }))
+                  }
+                >
+                  {config.unitTypes[type].name}
+                </button>
+              ))}
+
+              <h3 className="mt-4">CPU Units</h3>
+              {Object.keys(config.unitTypes).map(type => (
+                <button
+                  key={type}
+                  disabled={customSetup.player2.length >= 3}
+                  onClick={() =>
+                    setCustomSetup(s => ({
+                      ...s,
+                      player2: [...s.player2, type]
+                    }))
+                  }
+                >
+                  {config.unitTypes[type].name}
+                </button>
+              ))}
+
+              <button
+                disabled={customSetup.player1.length !== 3 || customSetup.player2.length !== 3}
+                onClick={startCustomGame}
+                className="mt-6 bg-green-600 px-6 py-3 rounded"
+              >
+                Start Match
+              </button>
             </div>
           )}
         </>
