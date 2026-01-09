@@ -617,7 +617,7 @@
 
       // ==================== PLAYER ACTIONS ====================
       const handleUnitClick = (unit) => {
-        // Se abilità attiva e target valido → usa abilità
+        // se abilità attiva e target valido → usa abilità
         if (
           activeAbility &&
           activeAbility.validTargets.some(
@@ -628,18 +628,15 @@
           return;
         }
 
-        // Seleziona SEMPRE (amici o nemici)
+        // altrimenti seleziona SEMPRE (amici o nemici)
         setSelectedUnit(unit);
       };
 
       const handleHexClick = (q, r) => {
-        if (activeAbility) {
-          handleAbilityTarget(q, r);
-          return;
-        }
+        // se abilità attiva → non muovere
+        if (activeAbility) return;
 
         if (!selectedUnit || selectedUnit.player !== currentPlayer) return;
-
         if (activatedUnits.has(selectedUnit.id)) return;
 
         const validMoves = getValidMoves(selectedUnit);
@@ -681,16 +678,21 @@
         const ability = ABILITIES[abilityId];
         if (!ability) return;
 
-        const result = ability.getTargets(unit, {
-          getUnitAt,
-          isOccupied,
-          config
-        });
+        // usa EFFECT, non getTargets
+        const result = ability.effect(
+          unit,
+          {
+            getUnitAt,
+            isOccupied,
+            config
+          },
+          { getNeighbors }
+        );
 
         setActiveAbility({
           unitId: unit.id,
           abilityId,
-          validTargets: result || []
+          validTargets: result?.targetHexes || []
         });
       };
 
