@@ -866,7 +866,7 @@
                   {/* Action Buttons */}
                   {liveSelectedUnit && liveSelectedUnit.player === currentPlayer && gamePhase === 'action' && (
                     <div className="flex gap-2 mt-2">
-                      {AbilitySystem.getAvailableAbilities(liveSelectedUnit, config)
+                      {AbilitySystem.getAvailableAbilities(liveSelectedUnit, gameStateForAbilities)
                         .filter(a => a.type === 'active' && a.trigger === 'attack')
                         .map(ability => {
                           const isDisabled = activatedUnits.has(liveSelectedUnit.id);
