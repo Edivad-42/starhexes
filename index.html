@@ -947,6 +947,7 @@
 
                         const isAbilityTarget = activeAbility
                           && activeAbility.unitId === selectedUnit?.id
+                          && Array.isArray(activeAbility.validTargets)
                           && activeAbility.validTargets.some(([aq, ar]) => aq === q && ar === r);
 
                         const isP1Zone = config.capitalZones.player1.some(z => z.q === q && z.r === r);
