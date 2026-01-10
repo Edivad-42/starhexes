@@ -639,13 +639,7 @@
           const abilityDef = ABILITIES[activeAbility.abilityId];
 
           if (abilityDef?.trigger === 'movement') {
-            const abilityMoves = abilityDef.effect(
-              selectedUnit,
-              gameStateForAbilities,
-              { getNeighbors }
-            )?.validMoves || [];
-
-            const isValid = abilityMoves.some(
+            const isValid = activeAbility.validTargets.some(
               ([mq, mr]) => mq === q && mr === r
             );
 
@@ -669,7 +663,6 @@
             return;
           }
 
-          // altre abilità (attacco)
           handleAbilityTarget(q, r);
           return;
         }
