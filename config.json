@@ -4,9 +4,57 @@
     "height": 8,
     "hexSize": 28,
     "disabledHexes": [
-      { "q": 0, "r": 0 },
-      { "q": 8, "r": 7 }
+      {
+        "q": 0,
+        "r": 0
+      },
+      {
+        "q": 8,
+        "r": 7
+      }
     ]
+  },
+  "capitalShipTypes": {
+    "mc80": {
+      "name": "MC80 Liberty Cruiser",
+      "health": 100,
+      "icon": "icons/capital/mc80.png",
+      "description": "A Mon Calamari cruiser with balanced defenses"
+    },
+    "isd": {
+      "name": "Imperial Star Destroyer",
+      "health": 100,
+      "icon": "icons/capital/isd.png",
+      "description": "The Empire's most iconic warship"
+    }
+  },
+  "factions": {
+    "rebels": {
+      "name": "Rebel Alliance",
+      "color": "#3b82f6",
+      "units": [
+        "xWing",
+        "aWing",
+        "yWing",
+        "bWing"
+      ],
+      "capitalShips": [
+        "mc80"
+      ]
+    },
+    "empire": {
+      "name": "Galactic Empire",
+      "color": "#ef4444",
+      "units": [
+        "tieF",
+        "tieI",
+        "tieB",
+        "alpha"
+      ],
+      "capitalShips": [
+        "isd"
+      ]
+    }
   },
   "players": {
     "player1": {
@@ -18,30 +66,34 @@
       "color": "#ef4444"
     }
   },
-  "capitalShips": {
-    "player1": {
-      "name": "MC80",
-      "health": 100,
-      "type": "cruiser",
-      "position": { "q": 0, "r": 1 }
-    },
-    "player2": {
-      "name": "Imperial Star Destroyer",
-      "health": 100,
-      "type": "cruiser",
-      "position": { "q": 8, "r": 6 }
-    }
-  },
   "capitalZones": {
     "player1": [
-      { "q": 1, "r": 0 },
-      { "q": 0, "r": 1 },
-      { "q": 0, "r": 2 }
+      {
+        "q": 1,
+        "r": 0
+      },
+      {
+        "q": 0,
+        "r": 1
+      },
+      {
+        "q": 0,
+        "r": 2
+      }
     ],
     "player2": [
-      { "q": 8, "r": 5 },
-      { "q": 8, "r": 6 },
-      { "q": 7, "r": 7 }
+      {
+        "q": 8,
+        "r": 5
+      },
+      {
+        "q": 8,
+        "r": 6
+      },
+      {
+        "q": 7,
+        "r": 7
+      }
     ]
   },
   "combat": {
@@ -55,7 +107,9 @@
       "capitalDamage": 20,
       "icon": "icons/starfighters/xWing.png",
       "description": "An all-round fighter with balanced stats",
-      "abilities": ["protonTorpedoes"]
+      "abilities": [
+        "protonTorpedoes"
+      ]
     },
     "aWing": {
       "name": "A-Wing",
@@ -64,7 +118,9 @@
       "capitalDamage": 10,
       "icon": "icons/starfighters/aWing.png",
       "description": "A fragile interceptor with high damage",
-      "abilities": ["doubleMove"]
+      "abilities": [
+        "doubleMove"
+      ]
     },
     "yWing": {
       "name": "Y-Wing",
@@ -123,14 +179,38 @@
   },
   "startingUnits": {
     "player1": [
-      { "type": "xWing", "q": 2, "r": 1 },
-      { "type": "aWing", "q": 2, "r": 2 },
-      { "type": "yWing", "q": 1, "r": 3 }
+      {
+        "type": "xWing",
+        "q": 2,
+        "r": 1
+      },
+      {
+        "type": "aWing",
+        "q": 2,
+        "r": 2
+      },
+      {
+        "type": "yWing",
+        "q": 1,
+        "r": 3
+      }
     ],
     "player2": [
-      { "type": "tieF", "q": 7, "r": 4 },
-      { "type": "tieI", "q": 6, "r": 5 },
-      { "type": "tieB", "q": 6, "r": 6 }
+      {
+        "type": "tieF",
+        "q": 7,
+        "r": 4
+      },
+      {
+        "type": "tieI",
+        "q": 6,
+        "r": 5
+      },
+      {
+        "type": "tieB",
+        "q": 6,
+        "r": 6
+      }
     ]
   },
   "ui": {
