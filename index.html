@@ -597,6 +597,7 @@
 
         console.log('Combat log:', log);
 
+        AbilitySystem.resetCooldowns(updatedUnits);
         setUnits(updatedUnits);
         setCapitalShips(newCapitalShips);
         setCombatLog(log);
