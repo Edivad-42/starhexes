@@ -621,70 +621,55 @@
 
       // ==================== PLAYER ACTIONS ====================
       const handleUnitClick = (unit) => {
-        // Se cambio unità mentre un'abilità è attiva → disattiva abilità
-        if (activeAbility) {
-          setActiveAbility(null);
-          setCurrentValidHexes([]);
-        }
-
-        // Se clicco la stessa unità già selezionata → non fare nulla
-        if (selectedUnit && selectedUnit.id === unit.id) {
-          return;
-        }
-
-        // Seleziona SEMPRE (anche nemici / unità già attivate)
-        setSelectedUnit(unit);
-
-        // Solo le mie unità NON attivate possono generare movimenti base
-        if (
-          unit.player === currentPlayer &&
-          !activatedUnits.has(unit.id)
-        ) {
-          const moves = getValidMoves(unit);
-          setCurrentValidHexes(moves);
-        } else {
-          setCurrentValidHexes([]);
-        }
-      };
-
-      const handleHexClick = (q, r) => {
-        if (!selectedUnit) return;
-
-        // MOVIMENTO DA ABILITÀ
+        // SE C'È UN'ABILITÀ DI ATTACCO ATTIVA E CLICCO SU UN BERSAGLIO VALIDO
         if (
           activeAbility &&
-          activeAbility.unitId === selectedUnit.id &&
-          activeAbility.validMoves
+          activeAbility.validTargets &&
+          Array.isArray(activeAbility.validTargets) &&
+          activeAbility.validTargets.some(([aq, ar]) => aq === unit.q && ar === unit.r)
         ) {
-          const isValid = activeAbility.validMoves.some(
-            ([mq, mr]) => mq === q && mr === r
-          );
+      handleAbilityTarget(unit.q, unit.r);
+      return; // IMPORTANTE: esci subito senza selezionare l'unità
+    }
 
-          if (!isValid) return;
+    // Se cambio unità mentre un'abilità è attiva → disattiva abilità
+    if (activeAbility) {
+      setActiveAbility(null);
+      setCurrentValidHexes([]);
+    }
 
-          setUnits(prev =>
-            prev.map(u =>
-              u.id === selectedUnit.id ? { ...u, q, r } : u
-            )
-          );
+    // Se clicco la stessa unità già selezionata → non fare nulla
+    if (selectedUnit && selectedUnit.id === unit.id) {
+      return;
+    }
 
-          const ability = ABILITIES[activeAbility.abilityId];
-          ability?.onUse?.(selectedUnit);
+    // Seleziona SEMPRE (anche nemici / unità già attivate)
+    setSelectedUnit(unit);
 
-          setActiveAbility(null);
-          setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
-          setSelectedUnit(null);
-          setCurrentPlayer(2);
-          setNeedsAIMove(true);
-          return;
-        }
+    // Solo le mie unità NON attivate possono generare movimenti base
+    if (
+      unit.player === currentPlayer &&
+      !activatedUnits.has(unit.id)
+    ) {
+      const moves = getValidMoves(unit);
+      setCurrentValidHexes(moves);
+    } else {
+      setCurrentValidHexes([]);
+    }
+      };
 
-        // MOVIMENTO NORMALE
-        if (selectedUnit.player !== currentPlayer) return;
-        if (activatedUnits.has(selectedUnit.id)) return;
+    const handleHexClick = (q, r) => {
+      if (!selectedUnit) return;
 
-        const validMoves = getValidMoves(selectedUnit);
-        const isValid = validMoves.some(([mq, mr]) => mq === q && mr === r);
+      // MOVIMENTO DA ABILITÀ
+      if (
+        activeAbility &&
+        activeAbility.unitId === selectedUnit.id &&
+        activeAbility.validMoves
+      ) {
+        const isValid = activeAbility.validMoves.some(
+          ([mq, mr]) => mq === q && mr === r
+        );
 
         if (!isValid) return;
 
@@ -694,621 +679,647 @@
           )
         );
 
+        const ability = ABILITIES[activeAbility.abilityId];
+        ability?.onUse?.(selectedUnit);
+
+        setActiveAbility(null);
         setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
         setSelectedUnit(null);
         setCurrentPlayer(2);
         setNeedsAIMove(true);
-      };
+        return;
+      }
 
-      const handlePass = () => {
-        if (!selectedUnit || activatedUnits.has(selectedUnit.id)) return;
+      // MOVIMENTO NORMALE
+      if (selectedUnit.player !== currentPlayer) return;
+      if (activatedUnits.has(selectedUnit.id)) return;
 
-        if (selectedUnit.player !== currentPlayer) return;
+      const validMoves = getValidMoves(selectedUnit);
+      const isValid = validMoves.some(([mq, mr]) => mq === q && mr === r);
 
-        setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
-        setSelectedUnit(null);
-        setCurrentPlayer(2);
-        setNeedsAIMove(true);
-      };
+      if (!isValid) return;
 
-      const activateAbility = (unit, abilityId) => {
-        // toggle off
-        if (
-          activeAbility &&
-          activeAbility.unitId === unit.id &&
-          activeAbility.abilityId === abilityId
-        ) {
-          setActiveAbility(null);
-          return;
-        }
+      setUnits(prev =>
+        prev.map(u =>
+          u.id === selectedUnit.id ? { ...u, q, r } : u
+        )
+      );
 
-        const ability = ABILITIES[abilityId];
-        if (!ability) return;
+      setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
+      setSelectedUnit(null);
+      setCurrentPlayer(2);
+      setNeedsAIMove(true);
+    };
 
-        let data = {};
+    const handlePass = () => {
+      if (!selectedUnit || activatedUnits.has(selectedUnit.id)) return;
 
-        if (ability.trigger === 'movement') {
-          const result = ability.effect(
-            unit,
-            gameStateForAbilities,
-            { getNeighbors }
-          );
-          data.validMoves = result?.validMoves || [];
-        }
+      if (selectedUnit.player !== currentPlayer) return;
 
-        if (ability.trigger === 'attack') {
-          const result = ability.effect(
-            unit,
-            gameStateForAbilities,
-            { getNeighbors }
-          );
-          data.validTargets = result?.targetHexes || [];
-        }
+      setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
+      setSelectedUnit(null);
+      setCurrentPlayer(2);
+      setNeedsAIMove(true);
+    };
 
-        setActiveAbility({
-          unitId: unit.id,
-          abilityId,
-          ...data
-        });
-      };
+    const activateAbility = (unit, abilityId) => {
+      // toggle off
+      if (
+        activeAbility &&
+        activeAbility.unitId === unit.id &&
+        activeAbility.abilityId === abilityId
+      ) {
+        setActiveAbility(null);
+        return;
+      }
 
-      const handleAbilityTarget = (q, r) => {
-        if (!activeAbility) return;
+      const ability = ABILITIES[abilityId];
+      if (!ability) return;
 
-        const { unitId, abilityId } = activeAbility;
-        const unit = unitsRef.current.find(u => u.id === unitId);
-        if (!unit) return;
+      let data = {};
 
-        const ability = ABILITIES[abilityId];
-        const result = ability.onUse(unit, { q, r });
+      if (ability.trigger === 'movement') {
+        const result = ability.effect(
+          unit,
+          gameStateForAbilities,
+          { getNeighbors }
+        );
+        data.validMoves = result?.validMoves || [];
+      }
 
-        // aggiorna danni
-        if (result?.damage) {
-          setUnits(prev =>
-            prev.map(u =>
-              u.q === q && u.r === r
-                ? { ...u, health: Math.max(0, u.health - result.damage) }
-                : u
-            )
-          );
-        }
+      if (ability.trigger === 'attack') {
+        const result = ability.effect(
+          unit,
+          gameStateForAbilities,
+          { getNeighbors }
+        );
+        data.validTargets = result?.targetHexes || [];
+      }
 
-        // 🔥 FORZA REACT A VEDERE IL CAMBIAMENTO DI CARICHE
+      setActiveAbility({
+        unitId: unit.id,
+        abilityId,
+        ...data
+      });
+    };
+
+    const handleAbilityTarget = (q, r) => {
+      if (!activeAbility) return;
+
+      const { unitId, abilityId } = activeAbility;
+      const unit = unitsRef.current.find(u => u.id === unitId);
+      if (!unit) return;
+
+      const ability = ABILITIES[abilityId];
+      const result = ability.onUse(unit, { q, r });
+
+      // aggiorna danni
+      if (result?.damage) {
         setUnits(prev =>
           prev.map(u =>
-            u.id === unit.id
-              ? { ...u, abilityStates: { ...u.abilityStates } }
+            u.q === q && u.r === r
+              ? { ...u, health: Math.max(0, u.health - result.damage) }
               : u
           )
         );
+      }
 
-        setActiveAbility(null);
-      };
+      // 🔥 FORZA REACT A VEDERE IL CAMBIAMENTO DI CARICHE
+      setUnits(prev =>
+        prev.map(u =>
+          u.id === unit.id
+            ? { ...u, abilityStates: { ...u.abilityStates } }
+            : u
+        )
+      );
 
-      // ==================== RENDERING ====================
-      const hexSize = config?.map.hexSize;
-      const hexWidth = hexSize * Math.sqrt(3);
-      const hexHeight = hexSize * 2;
-      const vertDist = hexHeight * 0.75;
-      const liveSelectedUnit = selectedUnit
-        ? units.find(u => u.id === selectedUnit.id)
-        : null;
-      const gameStateForAbilities = {
-        config,
-        getUnitAt,
-        isOccupied,
-        isEngaged
-      };
+      setActiveAbility(null);
+    };
 
-      const renderUnitActions = () => {
-        if (!selectedUnit) return null;
+    // ==================== RENDERING ====================
+    const hexSize = config?.map.hexSize;
+    const hexWidth = hexSize * Math.sqrt(3);
+    const hexHeight = hexSize * 2;
+    const vertDist = hexHeight * 0.75;
+    const liveSelectedUnit = selectedUnit
+      ? units.find(u => u.id === selectedUnit.id)
+      : null;
+    const gameStateForAbilities = {
+      config,
+      getUnitAt,
+      isOccupied,
+      isEngaged
+    };
 
-        const isMine =
-          selectedUnit.player === currentPlayer &&
-          gamePhase === 'action';
+    const renderUnitActions = () => {
+      if (!selectedUnit) return null;
 
-        const isActivated = activatedUnits.has(selectedUnit.id);
+      const isMine =
+        selectedUnit.player === currentPlayer &&
+        gamePhase === 'action';
 
-        return (
-          <>
-            {/* HEADER */}
-            <div className="mb-2">
-              <div className="text-white font-bold">
-                {config.unitTypes[selectedUnit.type].name}
-              </div>
-              <div className="text-xs text-gray-400">
-                {selectedUnit.id}
-              </div>
-            </div>
-
-            {/* PASS */}
-            {isMine && !isActivated && (
-              <button
-                onClick={handlePass}
-                className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded"
-              >
-                ⏭ Pass
-              </button>
-            )}
-
-            {/* ABILITÀ */}
-            {isMine &&
-              AbilitySystem
-                .getAvailableAbilities(selectedUnit, gameStateForAbilities)
-                .filter(a => a.type === 'active')
-                .map(ability => {
-                  const active = activeAbility?.abilityId === ability.id;
-                  const abilityDef = ABILITIES[ability.id];
-                  const disabled =
-                    abilityDef?.canUse
-                      ? !abilityDef.canUse(selectedUnit, gameStateForAbilities)
-                      : false;
-
-                  return (
-                    <button
-                      key={ability.id}
-                      disabled={isActivated || disabled}
-                      onClick={() => activateAbility(selectedUnit, ability.id)}
-                      className={`w-full px-3 py-2 rounded text-white
-            ${(isActivated || disabled)
-                          ? 'bg-gray-600 opacity-40 cursor-not-allowed'
-                          : active
-                            ? 'bg-yellow-600'
-                            : 'bg-purple-700 hover:bg-purple-800'}
-          `}
-                    >
-                      {ability.icon} {ability.name}
-                      {ability.state?.charges !== undefined && (
-                        <span className="ml-2 text-xs opacity-80">
-                          ({ability.state.charges})
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-
-            {/* INFO – SEMPRE VISIBILE */}
-            <button
-              onClick={() => setShowUnitInfo(true)}
-              className="w-full mt-auto px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold"
-            >
-              ℹ️ Info
-            </button>
-          </>
-        );
-      };
-
+      const isActivated = activatedUnits.has(selectedUnit.id);
 
       return (
         <>
-          {!config && (
-            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-              <div className="text-white text-xl">Loading...</div>
+          {/* HEADER */}
+          <div className="mb-2">
+            <div className="text-white font-bold">
+              {config.unitTypes[selectedUnit.type].name}
             </div>
+            <div className="text-xs text-gray-400">
+              {selectedUnit.id}
+            </div>
+          </div>
+
+          {/* PASS */}
+          {isMine && !isActivated && (
+            <button
+              onClick={handlePass}
+              className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded"
+            >
+              ⏭ Pass
+            </button>
           )}
 
-          {config && gameState === 'menu' && (
-            <MainMenu
-              onStartGame={handleStartGame}
-              onShowHowToPlay={handleShowHowToPlay}
-              onCustomMatch={() => setGameState('custom')}
-            />
-          )}
+          {/* ABILITÀ */}
+          {isMine &&
+            AbilitySystem
+              .getAvailableAbilities(selectedUnit, gameStateForAbilities)
+              .filter(a => a.type === 'active')
+              .map(ability => {
+                const active = activeAbility?.abilityId === ability.id;
+                const abilityDef = ABILITIES[ability.id];
+                const disabled =
+                  abilityDef?.canUse
+                    ? !abilityDef.canUse(selectedUnit, gameStateForAbilities)
+                    : false;
 
-          {config && gameState === 'howtoplay' && (
-            <HowToPlay onBack={handleBackToMenu} />
-          )}
-
-          {config && gameState === 'game' && (
-            <div className="w-full h-full bg-gray-800 flex flex-col">
-              <div className="w-full h-full bg-gray-800 flex flex-col">
-                {/* Top Bar */}
-                <div className="flex justify-center items-center py-2 bg-gray-900 text-white">
-                  {gamePhase === 'action' ? (
-                    <>
-                      <span className={currentPlayer === 1 ? 'text-blue-400' : 'text-red-400'}>
-                        P{currentPlayer}
-                      </span>
-                      {' '}- {currentPlayer === 1 ? 'Move unit' : 'AI thinking...'}
-                    </>
-                  ) : (
-                    <span className="text-yellow-400">COMBAT</span>
-                  )}
-                </div>
-
-                {/* Game Board */}
-                <div className="flex-1 bg-gray-900 flex items-center justify-center overflow-hidden">
-                  <svg viewBox="0 0 600 400" className="max-w-full max-h-full" preserveAspectRatio="xMidYMid meet" >
-                    {/* Hexes */}
-                    {Array.from({ length: config.map.height }, (_, r) =>
-                      Array.from({ length: config.map.width }, (_, q) => {
-                        if (config.map.disabledHexes.some(h => h.q === q && h.r === r)) return null;
-
-                        const x = hexWidth * q + (r % 2) * (hexWidth / 2) + 40;
-                        const y = vertDist * r + 35;
-
-                        const unit = units.find(u => u.q === q && u.r === r && u.health > 0);
-                        const isSelected = selectedUnit && selectedUnit.q === q && selectedUnit.r === r;
-
-                        let validMoves = [];
-
-                        if (
-                          selectedUnit &&
-                          selectedUnit.player === currentPlayer &&
-                          !activatedUnits.has(selectedUnit.id)
-                        ) {
-                          if (activeAbility?.unitId === selectedUnit.id) {
-                            validMoves = activeAbility.validMoves || [];
-                          } else {
-                            validMoves = getValidMoves(selectedUnit);
-                          }
-                        }
-
-                        const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
-
-                        const isAbilityTarget = activeAbility
-                          && activeAbility.unitId === selectedUnit?.id
-                          && Array.isArray(activeAbility.validTargets)
-                          && activeAbility.validTargets.some(([aq, ar]) => aq === q && ar === r);
-
-                        const isP1Zone = config.capitalZones.player1.some(z => z.q === q && z.r === r);
-                        const isP2Zone = config.capitalZones.player2.some(z => z.q === q && z.r === r);
-
-                        let fill = '#1e293b';
-                        let stroke = '#475569';
-                        let strokeWidth = 2;
-
-                        if (isP1Zone) { fill = '#1e3a5f'; stroke = '#3b82f6'; strokeWidth = 2; }
-                        if (isP2Zone) { fill = '#4a1a1a'; stroke = '#ef4444'; strokeWidth = 2; }
-                        if (isValidMove) fill = '#064e3b';
-                        if (isSelected) fill = '#fbbf24';
-                        if (isAbilityTarget) fill = '#7f1d1d';
-
-                        return (
-                          <g key={`${q}-${r}`}>
-                            <polygon
-                              points={`${x},${y - hexSize} ${x + hexSize * 0.866},${y - hexSize / 2} ${x + hexSize * 0.866},${y + hexSize / 2} ${x},${y + hexSize} ${x - hexSize * 0.866},${y + hexSize / 2} ${x - hexSize * 0.866},${y - hexSize / 2}`}
-                              fill={fill}
-                              stroke={stroke}
-                              strokeWidth={strokeWidth}
-                              strokeLinejoin="round"
-                              onClick={() => {
-                                if (unit) {
-                                  handleUnitClick(unit);
-                                } else {
-                                  handleHexClick(q, r);
-                                }
-                              }}
-                              className="cursor-pointer hover:opacity-80"
-                            />
-
-                            {unit && (
-                              <>
-                                <circle
-                                  cx={x}
-                                  cy={y}
-                                  r={20}
-                                  fill={config.players[`player${unit.player}`].color}
-                                  stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
-                                  strokeWidth="3"
-                                  onClick={() => handleUnitClick(unit)}
-                                  className="cursor-pointer"
-                                />
-                                <image
-                                  href={config.unitTypes[unit.type].icon}
-                                  x={x - 12}
-                                  y={y - 12}
-                                  width={24}
-                                  height={24}
-                                  style={{ pointerEvents: 'none' }}
-                                />
-                                <text
-                                  x={x}
-                                  y={y + 12}
-                                  textAnchor="middle"
-                                  fill="white"
-                                  fontSize="9"
-                                  fontWeight="bold"
-                                  style={{ pointerEvents: 'none' }}
-                                >
-                                  {Math.round(unit.health)}
-                                </text>
-                              </>
-                            )}
-                          </g>
-                        );
-                      })
-                    )}
-                  </svg>
-
-                  {/* Action Buttons */}
-                  <div className="w-64 bg-gray-900 border-l border-gray-700 p-3 flex flex-col gap-2">
-                    {selectedUnit && renderUnitActions()}
-                  </div>
-                </div>
-
-                {/* Bottom Status */}
-                <div className="grid grid-cols-2 gap-1 p-1 bg-gray-900 text-xs">
-                  {/* Player 1 */}
-                  <div className="bg-blue-900 p-1 rounded">
-                    <div className="flex justify-between text-white mb-1">
-                      <span className="font-bold text-blue-300">{config.capitalShips.player1.name}</span>
-                      <span>{units.filter(u => u.player === 1 && u.health > 0).length} units</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="flex-1 bg-gray-700 rounded h-2">
-                        <div
-                          className="bg-blue-400 h-full"
-                          style={{ width: `${(capitalShips.player1?.currentHealth / capitalShips.player1?.health * 100) || 0}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-white text-[10px]">{capitalShips.player1?.currentHealth || 0}</span>
-                    </div>
-                  </div>
-
-                  {/* Player 2 */}
-                  <div className="bg-red-900 p-1 rounded">
-                    <div className="flex justify-between text-white mb-1">
-                      <span>{units.filter(u => u.player === 2 && u.health > 0).length} units</span>
-                      <span className="font-bold text-red-300">{config.capitalShips.player2.name}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="flex-1 bg-gray-700 rounded h-2">
-                        <div
-                          className="bg-red-400 h-full"
-                          style={{ width: `${(capitalShips.player2?.currentHealth / capitalShips.player2?.health * 100) || 0}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-white text-[10px]">{capitalShips.player2?.currentHealth || 0}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Combat Log Modal */}
-                {showCombatLog && (
-                  <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-                    <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4 border-4 border-yellow-500 max-h-[80vh] flex flex-col">
-                      <h2 className="text-3xl font-bold text-yellow-400 text-center mb-4">⚔️ COMBAT LOG ⚔️</h2>
-
-                      <div className="flex-1 overflow-y-auto bg-gray-800 rounded p-4 mb-4 font-mono text-sm text-white">
-                        {combatLog.map((line, i) => (
-                          <div key={i} className="mb-1">{line}</div>
-                        ))}
-                      </div>
-
-                      <button
-                        onClick={handleCombatLogOk}
-                        className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl font-bold rounded-lg"
-                      >
-                        OK
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Unit Info Modal */}
-                {showUnitInfo && selectedUnit && (
-                  <div
-                    className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
-                    onClick={() => setShowUnitInfo(false)}
+                return (
+                  <button
+                    key={ability.id}
+                    disabled={isActivated || disabled}
+                    onClick={() => activateAbility(selectedUnit, ability.id)}
+                    className={`w-full px-3 py-2 rounded text-white
+            ${(isActivated || disabled)
+                        ? 'bg-gray-600 opacity-40 cursor-not-allowed'
+                        : active
+                          ? 'bg-yellow-600'
+                          : 'bg-purple-700 hover:bg-purple-800'}
+          `}
                   >
-                    <div
-                      className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border-4"
-                      style={{ borderColor: config.players[`player${selectedUnit.player}`].color }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex items-center gap-4 mb-4">
-                        <img src={config.unitTypes[selectedUnit.type].icon} alt="" className="w-16 h-16" />
-                        <div>
-                          <h2 className="text-2xl font-bold text-white">{config.unitTypes[selectedUnit.type].name}</h2>
-                          <p className="text-gray-400 text-sm">{selectedUnit.id}</p>
-                        </div>
-                      </div>
+                    {ability.icon} {ability.name}
+                    {ability.state?.charges !== undefined && (
+                      <span className="ml-2 text-xs opacity-80">
+                        ({ability.state.charges})
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
 
-                      <p className="text-gray-300 mb-4 italic">{config.unitTypes[selectedUnit.type].description}</p>
-
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-gray-700 rounded p-2">
-                          <div className="text-gray-400 text-xs mb-1">Health</div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 bg-gray-600 rounded h-3">
-                              <div
-                                className="bg-green-500 h-full"
-                                style={{ width: `${(selectedUnit.health / selectedUnit.maxHealth * 100)}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-white text-sm font-bold">{Math.round(selectedUnit.health)}/{selectedUnit.maxHealth}</span>
-                          </div>
-                        </div>
-
-                        <div className="bg-gray-700 rounded p-2">
-                          <div className="text-gray-400 text-xs">Damage</div>
-                          <div className="text-white font-bold text-lg">{selectedUnit.damage}</div>
-                        </div>
-
-                        <div className="bg-gray-700 rounded p-2">
-                          <div className="text-gray-400 text-xs">Capital Damage</div>
-                          <div className="text-white font-bold text-lg">{selectedUnit.capitalDamage}</div>
-                        </div>
-                      </div>
-
-                      {/* ABILITIES */}
-                      <div className="mt-4">
-                        <h3 className="text-lg font-bold text-yellow-400 mb-2">
-                          Abilities
-                        </h3>
-
-                        <div className="space-y-2">
-                          {(config.unitTypes[selectedUnit.type].abilities || []).map(abilityId => {
-                            const ability = ABILITIES[abilityId];
-                            const state = selectedUnit.abilityStates?.[abilityId];
-
-                            if (!ability) return null;
-
-                            return (
-                              <div
-                                key={abilityId}
-                                className="bg-gray-700 rounded p-2 border border-gray-600"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xl">{ability.icon}</span>
-                                  <span className="font-bold text-white">
-                                    {ability.name}
-                                  </span>
-                                  <span className="ml-auto text-xs text-gray-400">
-                                    {ability.type.toUpperCase()}
-                                  </span>
-                                </div>
-
-                                <div className="text-gray-300 text-sm mt-1">
-                                  {ability.description}
-                                </div>
-
-                                {state?.charges !== undefined && (
-                                  <div className="text-xs text-gray-400 mt-1">
-                                    Charges: {state.charges} / {ability.maxCharges}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => setShowUnitInfo(false)}
-                        className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {winner && (
-                  <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-                    <div className="bg-gray-900 border-4 border-yellow-500 rounded-xl p-8 text-center">
-                      <h1 className="text-4xl font-bold text-yellow-400 mb-4">
-                        🏆 PLAYER {winner} WINS!
-                      </h1>
-                      <p className="text-gray-300 mb-6">
-                        {winner === 1
-                          ? 'The enemy fleet has been destroyed.'
-                          : 'Your fleet has been annihilated.'}
-                      </p>
-                      <button
-                        onClick={() => window.location.reload()}
-                        className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl rounded-lg"
-                      >
-                        Restart Game
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div >
-          )}
-
-          {
-            config && gameState === 'custom' && (
-              <div className="w-full h-full bg-gray-900 text-white flex flex-col items-center p-6">
-                <h1 className="text-3xl font-bold text-purple-400 mb-6">
-                  Custom Match
-                </h1>
-
-                <div className="grid grid-cols-2 gap-8 w-full max-w-5xl">
-
-                  {/* PLAYER */}
-                  <div className="bg-gray-800 rounded-lg p-4 border border-blue-500">
-                    <h2 className="text-xl font-bold text-blue-400 mb-2">
-                      Player Units ({customSetup.player1.length}/3)
-                    </h2>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {Object.keys(config.unitTypes).map(type => {
-                        const unit = config.unitTypes[type];
-                        const disabled = customSetup.player1.length >= 3;
-
-                        return (
-                          <button
-                            key={type}
-                            disabled={disabled}
-                            onClick={() =>
-                              setCustomSetup(s => ({
-                                ...s,
-                                player1: [...s.player1, type]
-                              }))
-                            }
-                            className={`flex items-center gap-2 p-2 rounded
-                  ${disabled ? 'bg-gray-700 opacity-40' : 'bg-gray-700 hover:bg-blue-600'}
-                `}
-                          >
-                            <img src={unit.icon} alt="" className="w-6 h-6" />
-                            <span className="text-sm">{unit.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* CPU */}
-                  <div className="bg-gray-800 rounded-lg p-4 border border-red-500">
-                    <h2 className="text-xl font-bold text-red-400 mb-2">
-                      CPU Units ({customSetup.player2.length}/3)
-                    </h2>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {Object.keys(config.unitTypes).map(type => {
-                        const unit = config.unitTypes[type];
-                        const disabled = customSetup.player2.length >= 3;
-
-                        return (
-                          <button
-                            key={type}
-                            disabled={disabled}
-                            onClick={() =>
-                              setCustomSetup(s => ({
-                                ...s,
-                                player2: [...s.player2, type]
-                              }))
-                            }
-                            className={`flex items-center gap-2 p-2 rounded
-                  ${disabled ? 'bg-gray-700 opacity-40' : 'bg-gray-700 hover:bg-red-600'}
-                `}
-                          >
-                            <img src={unit.icon} alt="" className="w-6 h-6" />
-                            <span className="text-sm">{unit.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* START */}
-                <button
-                  disabled={customSetup.player1.length !== 3 || customSetup.player2.length !== 3}
-                  onClick={startCustomGame}
-                  className={`mt-8 px-8 py-4 rounded-lg text-xl font-bold
-        ${customSetup.player1.length === 3 && customSetup.player2.length === 3
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-gray-600 opacity-40 cursor-not-allowed'}
-      `}
-                >
-                  Start Match
-                </button>
-
-                <button
-                  onClick={() => setGameState('menu')}
-                  className="mt-4 text-gray-400 hover:text-white underline"
-                >
-                  Back to Menu
-                </button>
-              </div>
-            )
-          }
+          {/* INFO – SEMPRE VISIBILE */}
+          <button
+            onClick={() => setShowUnitInfo(true)}
+            className="w-full mt-auto px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold"
+          >
+            ℹ️ Info
+          </button>
         </>
       );
+    };
+
+
+    return (
+      <>
+        {!config && (
+          <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+            <div className="text-white text-xl">Loading...</div>
+          </div>
+        )}
+
+        {config && gameState === 'menu' && (
+          <MainMenu
+            onStartGame={handleStartGame}
+            onShowHowToPlay={handleShowHowToPlay}
+            onCustomMatch={() => setGameState('custom')}
+          />
+        )}
+
+        {config && gameState === 'howtoplay' && (
+          <HowToPlay onBack={handleBackToMenu} />
+        )}
+
+        {config && gameState === 'game' && (
+          <div className="w-full h-full bg-gray-800 flex flex-col">
+            <div className="w-full h-full bg-gray-800 flex flex-col">
+              {/* Top Bar */}
+              <div className="flex justify-center items-center py-2 bg-gray-900 text-white">
+                {gamePhase === 'action' ? (
+                  <>
+                    <span className={currentPlayer === 1 ? 'text-blue-400' : 'text-red-400'}>
+                      P{currentPlayer}
+                    </span>
+                    {' '}- {currentPlayer === 1 ? 'Move unit' : 'AI thinking...'}
+                  </>
+                ) : (
+                  <span className="text-yellow-400">COMBAT</span>
+                )}
+              </div>
+
+              {/* Game Board */}
+              <div className="flex-1 bg-gray-900 flex items-center justify-center overflow-hidden">
+                <svg viewBox="0 0 600 400" className="max-w-full max-h-full" preserveAspectRatio="xMidYMid meet" >
+                  {/* Hexes */}
+                  {Array.from({ length: config.map.height }, (_, r) =>
+                    Array.from({ length: config.map.width }, (_, q) => {
+                      if (config.map.disabledHexes.some(h => h.q === q && h.r === r)) return null;
+
+                      const x = hexWidth * q + (r % 2) * (hexWidth / 2) + 40;
+                      const y = vertDist * r + 35;
+
+                      const unit = units.find(u => u.q === q && u.r === r && u.health > 0);
+                      const isSelected = selectedUnit && selectedUnit.q === q && selectedUnit.r === r;
+
+                      let validMoves = [];
+
+                      if (
+                        selectedUnit &&
+                        selectedUnit.player === currentPlayer &&
+                        !activatedUnits.has(selectedUnit.id)
+                      ) {
+                        if (activeAbility?.unitId === selectedUnit.id) {
+                          validMoves = activeAbility.validMoves || [];
+                        } else {
+                          validMoves = getValidMoves(selectedUnit);
+                        }
+                      }
+
+                      const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
+
+                      const isAbilityTarget = activeAbility
+                        && activeAbility.unitId === selectedUnit?.id
+                        && Array.isArray(activeAbility.validTargets)
+                        && activeAbility.validTargets.some(([aq, ar]) => aq === q && ar === r);
+
+                      const isP1Zone = config.capitalZones.player1.some(z => z.q === q && z.r === r);
+                      const isP2Zone = config.capitalZones.player2.some(z => z.q === q && z.r === r);
+
+                      let fill = '#1e293b';
+                      let stroke = '#475569';
+                      let strokeWidth = 2;
+
+                      if (isP1Zone) { fill = '#1e3a5f'; stroke = '#3b82f6'; strokeWidth = 2; }
+                      if (isP2Zone) { fill = '#4a1a1a'; stroke = '#ef4444'; strokeWidth = 2; }
+                      if (isValidMove) fill = '#064e3b';
+                      if (isSelected) fill = '#fbbf24';
+                      if (isAbilityTarget) fill = '#7f1d1d';
+
+                      return (
+                        <g key={`${q}-${r}`}>
+                          <polygon
+                            points={`${x},${y - hexSize} ${x + hexSize * 0.866},${y - hexSize / 2} ${x + hexSize * 0.866},${y + hexSize / 2} ${x},${y + hexSize} ${x - hexSize * 0.866},${y + hexSize / 2} ${x - hexSize * 0.866},${y - hexSize / 2}`}
+                            fill={fill}
+                            stroke={stroke}
+                            strokeWidth={strokeWidth}
+                            strokeLinejoin="round"
+                            onClick={() => {
+                              if (unit) {
+                                handleUnitClick(unit);
+                              } else {
+                                handleHexClick(q, r);
+                              }
+                            }}
+                            className="cursor-pointer hover:opacity-80"
+                          />
+
+                          {unit && (
+                            <>
+                              <circle
+                                cx={x}
+                                cy={y}
+                                r={20}
+                                fill={config.players[`player${unit.player}`].color}
+                                stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
+                                strokeWidth="3"
+                                onClick={() => handleUnitClick(unit)}
+                                className="cursor-pointer"
+                              />
+                              <image
+                                href={config.unitTypes[unit.type].icon}
+                                x={x - 12}
+                                y={y - 12}
+                                width={24}
+                                height={24}
+                                style={{ pointerEvents: 'none' }}
+                              />
+                              <text
+                                x={x}
+                                y={y + 12}
+                                textAnchor="middle"
+                                fill="white"
+                                fontSize="9"
+                                fontWeight="bold"
+                                style={{ pointerEvents: 'none' }}
+                              >
+                                {Math.round(unit.health)}
+                              </text>
+                            </>
+                          )}
+                        </g>
+                      );
+                    })
+                  )}
+                </svg>
+
+                {/* Action Buttons */}
+                <div className="w-64 bg-gray-900 border-l border-gray-700 p-3 flex flex-col gap-2">
+                  {selectedUnit && renderUnitActions()}
+                </div>
+              </div>
+
+              {/* Bottom Status */}
+              <div className="grid grid-cols-2 gap-1 p-1 bg-gray-900 text-xs">
+                {/* Player 1 */}
+                <div className="bg-blue-900 p-1 rounded">
+                  <div className="flex justify-between text-white mb-1">
+                    <span className="font-bold text-blue-300">{config.capitalShips.player1.name}</span>
+                    <span>{units.filter(u => u.player === 1 && u.health > 0).length} units</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="flex-1 bg-gray-700 rounded h-2">
+                      <div
+                        className="bg-blue-400 h-full"
+                        style={{ width: `${(capitalShips.player1?.currentHealth / capitalShips.player1?.health * 100) || 0}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-white text-[10px]">{capitalShips.player1?.currentHealth || 0}</span>
+                  </div>
+                </div>
+
+                {/* Player 2 */}
+                <div className="bg-red-900 p-1 rounded">
+                  <div className="flex justify-between text-white mb-1">
+                    <span>{units.filter(u => u.player === 2 && u.health > 0).length} units</span>
+                    <span className="font-bold text-red-300">{config.capitalShips.player2.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="flex-1 bg-gray-700 rounded h-2">
+                      <div
+                        className="bg-red-400 h-full"
+                        style={{ width: `${(capitalShips.player2?.currentHealth / capitalShips.player2?.health * 100) || 0}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-white text-[10px]">{capitalShips.player2?.currentHealth || 0}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Combat Log Modal */}
+              {showCombatLog && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+                  <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4 border-4 border-yellow-500 max-h-[80vh] flex flex-col">
+                    <h2 className="text-3xl font-bold text-yellow-400 text-center mb-4">⚔️ COMBAT LOG ⚔️</h2>
+
+                    <div className="flex-1 overflow-y-auto bg-gray-800 rounded p-4 mb-4 font-mono text-sm text-white">
+                      {combatLog.map((line, i) => (
+                        <div key={i} className="mb-1">{line}</div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={handleCombatLogOk}
+                      className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl font-bold rounded-lg"
+                    >
+                      OK
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Unit Info Modal */}
+              {showUnitInfo && selectedUnit && (
+                <div
+                  className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
+                  onClick={() => setShowUnitInfo(false)}
+                >
+                  <div
+                    className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border-4"
+                    style={{ borderColor: config.players[`player${selectedUnit.player}`].color }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-4 mb-4">
+                      <img src={config.unitTypes[selectedUnit.type].icon} alt="" className="w-16 h-16" />
+                      <div>
+                        <h2 className="text-2xl font-bold text-white">{config.unitTypes[selectedUnit.type].name}</h2>
+                        <p className="text-gray-400 text-sm">{selectedUnit.id}</p>
+                      </div>
+                    </div>
+
+                    <p className="text-gray-300 mb-4 italic">{config.unitTypes[selectedUnit.type].description}</p>
+
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="bg-gray-700 rounded p-2">
+                        <div className="text-gray-400 text-xs mb-1">Health</div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-gray-600 rounded h-3">
+                            <div
+                              className="bg-green-500 h-full"
+                              style={{ width: `${(selectedUnit.health / selectedUnit.maxHealth * 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-white text-sm font-bold">{Math.round(selectedUnit.health)}/{selectedUnit.maxHealth}</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-700 rounded p-2">
+                        <div className="text-gray-400 text-xs">Damage</div>
+                        <div className="text-white font-bold text-lg">{selectedUnit.damage}</div>
+                      </div>
+
+                      <div className="bg-gray-700 rounded p-2">
+                        <div className="text-gray-400 text-xs">Capital Damage</div>
+                        <div className="text-white font-bold text-lg">{selectedUnit.capitalDamage}</div>
+                      </div>
+                    </div>
+
+                    {/* ABILITIES */}
+                    <div className="mt-4">
+                      <h3 className="text-lg font-bold text-yellow-400 mb-2">
+                        Abilities
+                      </h3>
+
+                      <div className="space-y-2">
+                        {(config.unitTypes[selectedUnit.type].abilities || []).map(abilityId => {
+                          const ability = ABILITIES[abilityId];
+                          const state = selectedUnit.abilityStates?.[abilityId];
+
+                          if (!ability) return null;
+
+                          return (
+                            <div
+                              key={abilityId}
+                              className="bg-gray-700 rounded p-2 border border-gray-600"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-xl">{ability.icon}</span>
+                                <span className="font-bold text-white">
+                                  {ability.name}
+                                </span>
+                                <span className="ml-auto text-xs text-gray-400">
+                                  {ability.type.toUpperCase()}
+                                </span>
+                              </div>
+
+                              <div className="text-gray-300 text-sm mt-1">
+                                {ability.description}
+                              </div>
+
+                              {state?.charges !== undefined && (
+                                <div className="text-xs text-gray-400 mt-1">
+                                  Charges: {state.charges} / {ability.maxCharges}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setShowUnitInfo(false)}
+                      className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {winner && (
+                <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+                  <div className="bg-gray-900 border-4 border-yellow-500 rounded-xl p-8 text-center">
+                    <h1 className="text-4xl font-bold text-yellow-400 mb-4">
+                      🏆 PLAYER {winner} WINS!
+                    </h1>
+                    <p className="text-gray-300 mb-6">
+                      {winner === 1
+                        ? 'The enemy fleet has been destroyed.'
+                        : 'Your fleet has been annihilated.'}
+                    </p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl rounded-lg"
+                    >
+                      Restart Game
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div >
+        )}
+
+        {
+          config && gameState === 'custom' && (
+            <div className="w-full h-full bg-gray-900 text-white flex flex-col items-center p-6">
+              <h1 className="text-3xl font-bold text-purple-400 mb-6">
+                Custom Match
+              </h1>
+
+              <div className="grid grid-cols-2 gap-8 w-full max-w-5xl">
+
+                {/* PLAYER */}
+                <div className="bg-gray-800 rounded-lg p-4 border border-blue-500">
+                  <h2 className="text-xl font-bold text-blue-400 mb-2">
+                    Player Units ({customSetup.player1.length}/3)
+                  </h2>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.keys(config.unitTypes).map(type => {
+                      const unit = config.unitTypes[type];
+                      const disabled = customSetup.player1.length >= 3;
+
+                      return (
+                        <button
+                          key={type}
+                          disabled={disabled}
+                          onClick={() =>
+                            setCustomSetup(s => ({
+                              ...s,
+                              player1: [...s.player1, type]
+                            }))
+                          }
+                          className={`flex items-center gap-2 p-2 rounded
+                  ${disabled ? 'bg-gray-700 opacity-40' : 'bg-gray-700 hover:bg-blue-600'}
+                `}
+                        >
+                          <img src={unit.icon} alt="" className="w-6 h-6" />
+                          <span className="text-sm">{unit.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* CPU */}
+                <div className="bg-gray-800 rounded-lg p-4 border border-red-500">
+                  <h2 className="text-xl font-bold text-red-400 mb-2">
+                    CPU Units ({customSetup.player2.length}/3)
+                  </h2>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.keys(config.unitTypes).map(type => {
+                      const unit = config.unitTypes[type];
+                      const disabled = customSetup.player2.length >= 3;
+
+                      return (
+                        <button
+                          key={type}
+                          disabled={disabled}
+                          onClick={() =>
+                            setCustomSetup(s => ({
+                              ...s,
+                              player2: [...s.player2, type]
+                            }))
+                          }
+                          className={`flex items-center gap-2 p-2 rounded
+                  ${disabled ? 'bg-gray-700 opacity-40' : 'bg-gray-700 hover:bg-red-600'}
+                `}
+                        >
+                          <img src={unit.icon} alt="" className="w-6 h-6" />
+                          <span className="text-sm">{unit.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* START */}
+              <button
+                disabled={customSetup.player1.length !== 3 || customSetup.player2.length !== 3}
+                onClick={startCustomGame}
+                className={`mt-8 px-8 py-4 rounded-lg text-xl font-bold
+        ${customSetup.player1.length === 3 && customSetup.player2.length === 3
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-gray-600 opacity-40 cursor-not-allowed'}
+      `}
+              >
+                Start Match
+              </button>
+
+              <button
+                onClick={() => setGameState('menu')}
+                className="mt-4 text-gray-400 hover:text-white underline"
+              >
+                Back to Menu
+              </button>
+            </div>
+          )
+        }
+      </>
+    );
     };
 
     ReactDOM.render(<StarHexesGame />, document.getElementById('root'));
