@@ -64,7 +64,7 @@
       "capitalDamage": 10,
       "icon": "icons/starfighters/aWing.png",
       "description": "A fragile interceptor with high damage",
-      "abilities": []
+      "abilities": ["doubleMove"]
     },
     "yWing": {
       "name": "Y-Wing",

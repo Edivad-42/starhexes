@@ -15,7 +15,7 @@ const ABILITIES = {
         canUse: (unit, gameState) => {
             const state = unit.abilityStates?.doubleMove;
             if (!state) return false;
-            return state.charges > 0 && state.cooldown === 0;
+            return !gameState.isEngaged(unit) && state.charges > 0 && state.cooldown === 0;
         },
 
         effect: (unit, gameState, hexUtils) => {

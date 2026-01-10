@@ -671,7 +671,7 @@
         if (!ability) return;
 
         // BLOCCO: se non usabile, non fare nulla
-        if (!ability.canUse(unit, { config, getUnitAt, isOccupied })) {
+        if (!ability.canUse(unit, gameStateForAbilities)) {
           return;
         }
 
@@ -747,7 +747,9 @@
         config,
         getUnitAt,
         isOccupied,
+        isEngaged
       };
+
       const renderUnitActions = () => {
         if (!selectedUnit) return null;
 
@@ -786,15 +788,15 @@
                 .filter(a => a.type === 'active')
                 .map(ability => {
                   const active = activeAbility?.abilityId === ability.id;
-                  const noCharges = ability.state?.charges !== undefined && ability.state.charges <= 0;
+                  const disabled = !ability.canUse(selectedUnit, gameStateForAbilities);
 
                   return (
                     <button
                       key={ability.id}
-                      disabled={isActivated || noCharges}
+                      disabled={isActivated || disabled}
                       onClick={() => activateAbility(selectedUnit, ability.id)}
                       className={`w-full px-3 py-2 rounded text-white
-            ${(isActivated || noCharges)
+            ${(isActivated || disabled)
                           ? 'bg-gray-600 opacity-40 cursor-not-allowed'
                           : active
                             ? 'bg-yellow-600'
