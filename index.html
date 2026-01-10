@@ -208,6 +208,7 @@
       const [capitalShips, setCapitalShips] = useState({ player1: null, player2: null });
       const [currentPlayer, setCurrentPlayer] = useState(1);
       const [selectedUnit, setSelectedUnit] = useState(null);
+      const [currentValidHexes, setCurrentValidHexes] = useState([]);
       const [activatedUnits, setActivatedUnits] = useState(new Set());
       const [gamePhase, setGamePhase] = useState('action'); // 'action' or 'combat'
       const [combatLog, setCombatLog] = useState([]);
@@ -619,23 +620,30 @@
 
       // ==================== PLAYER ACTIONS ====================
       const handleUnitClick = (unit) => {
-        // se abilità attiva e target valido → usa abilità
-        if (
-          activeAbility &&
-          activeAbility.validTargets.some(
-            ([q, r]) => q === unit.q && r === unit.r
-          )
-        ) {
-          handleAbilityTarget(unit.q, unit.r);
+        // Se cambio unità mentre un'abilità è attiva → disattiva abilità
+        if (activeAbility) {
+          setActiveAbility(null);
+          setCurrentValidHexes([]);
+        }
+
+        // Se clicco la stessa unità già selezionata → non fare nulla
+        if (selectedUnit && selectedUnit.id === unit.id) {
           return;
         }
 
-        // se cambio unità mentre un'abilità è attiva → disattiva abilità
-        if (activeAbility && activeAbility.unitId !== unit.id) {
-          setActiveAbility(null);
-        }
-
+        // Seleziona SEMPRE (anche nemici / unità già attivate)
         setSelectedUnit(unit);
+
+        // Solo le mie unità NON attivate possono generare movimenti base
+        if (
+          unit.player === currentPlayer &&
+          !activatedUnits.has(unit.id)
+        ) {
+          const moves = getValidMoves(unit);
+          setCurrentValidHexes(moves);
+        } else {
+          setCurrentValidHexes([]);
+        }
       };
 
       const handleHexClick = (q, r) => {
@@ -646,7 +654,7 @@
           const abilityDef = ABILITIES[activeAbility.abilityId];
 
           if (abilityDef?.trigger === 'movement') {
-            const isValid = activeAbility.validTargets.some(
+            const isValid = currentValidHexes.some(
               ([mq, mr]) => mq === q && mr === r
             );
 
@@ -663,6 +671,7 @@
             abilityDef.onUse(selectedUnit);
 
             setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
+            setCurrentValidHexes([]);
             setActiveAbility(null);
             setSelectedUnit(null);
             setCurrentPlayer(2);
@@ -704,14 +713,6 @@
       };
 
       const activateAbility = (unit, abilityId) => {
-        const ability = ABILITIES[abilityId];
-        if (!ability) return;
-
-        // BLOCCO: se non usabile, non fare nulla
-        if (!ability.canUse(unit, gameStateForAbilities)) {
-          return;
-        }
-
         // toggle off
         if (
           activeAbility &&
@@ -722,19 +723,19 @@
           return;
         }
 
+        const ability = ABILITIES[abilityId];
+        if (!ability) return;
+
         const result = ability.effect(
           unit,
-          {
-            getUnitAt,
-            isOccupied,
-            config
-          },
+          gameStateForAbilities,
           { getNeighbors }
         );
 
         setActiveAbility({
           unitId: unit.id,
           abilityId,
+          validMoves: result?.validMoves || [],
           validTargets: result?.targetHexes || []
         });
       };
@@ -924,18 +925,8 @@
                           selectedUnit.player === currentPlayer &&
                           !activatedUnits.has(selectedUnit.id)
                         ) {
-                          if (activeAbility) {
-                            const abilityDef = ABILITIES[activeAbility.abilityId];
-
-                            if (abilityDef?.trigger === 'movement' && abilityDef.effect) {
-                              const result = abilityDef.effect(
-                                selectedUnit,
-                                gameStateForAbilities,
-                                { getNeighbors }
-                              );
-
-                              validMoves = result?.validMoves || [];
-                            }
+                          if (activeAbility?.unitId === selectedUnit.id) {
+                            validMoves = activeAbility.validMoves || [];
                           } else {
                             validMoves = getValidMoves(selectedUnit);
                           }
@@ -971,9 +962,6 @@
                               onClick={() => {
                                 if (unit) {
                                   handleUnitClick(unit);
-                                } else if (activeAbility) {
-                                  // click su hex vuoto mentre abilità attiva → niente
-                                  return;
                                 } else {
                                   handleHexClick(q, r);
                                 }
