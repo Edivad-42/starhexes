@@ -630,12 +630,19 @@
           return;
         }
 
-        // altrimenti seleziona SEMPRE (amici o nemici)
+        // se cambio unità mentre un'abilità è attiva → disattiva abilità
+        if (activeAbility && activeAbility.unitId !== unit.id) {
+          setActiveAbility(null);
+        }
+
         setSelectedUnit(unit);
       };
 
       const handleHexClick = (q, r) => {
         if (activeAbility) {
+          // abilità legata ad altra unità → ignora
+          if (activeAbility.unitId !== selectedUnit?.id) return;
+
           const abilityDef = ABILITIES[activeAbility.abilityId];
 
           if (abilityDef?.trigger === 'movement') {
@@ -663,6 +670,7 @@
             return;
           }
 
+          // fallback per abilità di attacco
           handleAbilityTarget(q, r);
           return;
         }
@@ -935,7 +943,9 @@
 
                         const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
 
-                        const isAbilityTarget = activeAbility && activeAbility.validTargets.some(([aq, ar]) => aq === q && ar === r);
+                        const isAbilityTarget = activeAbility
+                          && activeAbility.unitId === selectedUnit?.id
+                          && activeAbility.validTargets.some(([aq, ar]) => aq === q && ar === r);
 
                         const isP1Zone = config.capitalZones.player1.some(z => z.q === q && z.r === r);
                         const isP2Zone = config.capitalZones.player2.some(z => z.q === q && z.r === r);
