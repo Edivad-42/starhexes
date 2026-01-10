@@ -691,9 +691,19 @@
         const isValid = validMoves.some(([mq, mr]) => mq === q && mr === r);
 
         if (isValid) {
-          setUnits(prev => prev.map(u =>
-            u.id === selectedUnit.id ? { ...u, q, r } : u
-          ));
+          setUnits(prev =>
+            prev.map(u =>
+              u.id === selectedUnit.id ? { ...u, q, r } : u
+            )
+          );
+
+          // se stiamo usando un'abilità di movimento → consumala
+          if (activeAbility && activeAbility.unitId === selectedUnit.id) {
+            const ability = ABILITIES[activeAbility.abilityId];
+            ability?.onUse?.(selectedUnit);
+            setActiveAbility(null);
+          }
+
           setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
           setSelectedUnit(null);
           setCurrentPlayer(2);
