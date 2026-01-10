@@ -1060,7 +1060,7 @@
                   {/* Player 1 */}
                   <div className="bg-blue-900 p-1 rounded">
                     <div className="flex justify-between text-white mb-1">
-                      <span className="font-bold text-blue-300">{config.capitalShips.player1.name}</span>
+                      <span className="font-bold text-blue-300">{capitalShips.player1?.name}</span>
                       <span>{units.filter(u => u.player === 1 && u.health > 0).length} units</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -1078,7 +1078,7 @@
                   <div className="bg-red-900 p-1 rounded">
                     <div className="flex justify-between text-white mb-1">
                       <span>{units.filter(u => u.player === 2 && u.health > 0).length} units</span>
-                      <span className="font-bold text-red-300">{config.capitalShips.player2.name}</span>
+                      <span className="font-bold text-red-300">{capitalShips.player2.name}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="flex-1 bg-gray-700 rounded h-2">
