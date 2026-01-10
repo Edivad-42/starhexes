@@ -647,68 +647,56 @@
       };
 
       const handleHexClick = (q, r) => {
-        if (activeAbility) {
-          // abilità legata ad altra unità → ignora
-          if (activeAbility.unitId !== selectedUnit?.id) return;
+        if (!selectedUnit) return;
 
-          const abilityDef = ABILITIES[activeAbility.abilityId];
+        // MOVIMENTO DA ABILITÀ
+        if (
+          activeAbility &&
+          activeAbility.unitId === selectedUnit.id &&
+          activeAbility.validMoves
+        ) {
+          const isValid = activeAbility.validMoves.some(
+            ([mq, mr]) => mq === q && mr === r
+          );
 
-          if (abilityDef?.trigger === 'movement') {
-            const isValid = currentValidHexes.some(
-              ([mq, mr]) => mq === q && mr === r
-            );
+          if (!isValid) return;
 
-            if (!isValid) return;
-
-            // muovi unità
-            setUnits(prev =>
-              prev.map(u =>
-                u.id === selectedUnit.id ? { ...u, q, r } : u
-              )
-            );
-
-            // consuma abilità
-            abilityDef.onUse(selectedUnit);
-
-            setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
-            setCurrentValidHexes([]);
-            setActiveAbility(null);
-            setSelectedUnit(null);
-            setCurrentPlayer(2);
-            setNeedsAIMove(true);
-            return;
-          }
-
-          // fallback per abilità di attacco
-          handleAbilityTarget(q, r);
-          return;
-        }
-
-        if (!selectedUnit || selectedUnit.player !== currentPlayer) return;
-        if (activatedUnits.has(selectedUnit.id)) return;
-
-        const validMoves = getValidMoves(selectedUnit);
-        const isValid = validMoves.some(([mq, mr]) => mq === q && mr === r);
-
-        if (isValid) {
           setUnits(prev =>
             prev.map(u =>
               u.id === selectedUnit.id ? { ...u, q, r } : u
             )
           );
 
-          // se stiamo usando un'abilità di movimento → consumala
-          if (activeAbility && activeAbility.unitId === selectedUnit.id) {
-            const ability = ABILITIES[activeAbility.abilityId];
-            ability?.onUse?.(selectedUnit);
-            setActiveAbility(null);
-          }
+          const ability = ABILITIES[activeAbility.abilityId];
+          ability?.onUse?.(selectedUnit);
 
+          setActiveAbility(null);
           setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
           setSelectedUnit(null);
           setCurrentPlayer(2);
           setNeedsAIMove(true);
+          return;
         }
+
+        // MOVIMENTO NORMALE
+        if (selectedUnit.player !== currentPlayer) return;
+        if (activatedUnits.has(selectedUnit.id)) return;
+
+        const validMoves = getValidMoves(selectedUnit);
+        const isValid = validMoves.some(([mq, mr]) => mq === q && mr === r);
+
+        if (!isValid) return;
+
+        setUnits(prev =>
+          prev.map(u =>
+            u.id === selectedUnit.id ? { ...u, q, r } : u
+          )
+        );
+
+        setActivatedUnits(prev => new Set([...prev, selectedUnit.id]));
+        setSelectedUnit(null);
+        setCurrentPlayer(2);
+        setNeedsAIMove(true);
       };
 
       const handlePass = () => {
@@ -736,17 +724,30 @@
         const ability = ABILITIES[abilityId];
         if (!ability) return;
 
-        const result = ability.effect(
-          unit,
-          gameStateForAbilities,
-          { getNeighbors }
-        );
+        let data = {};
+
+        if (ability.trigger === 'movement') {
+          const result = ability.effect(
+            unit,
+            gameStateForAbilities,
+            { getNeighbors }
+          );
+          data.validMoves = result?.validMoves || [];
+        }
+
+        if (ability.trigger === 'attack') {
+          const result = ability.effect(
+            unit,
+            gameStateForAbilities,
+            { getNeighbors }
+          );
+          data.validTargets = result?.targetHexes || [];
+        }
 
         setActiveAbility({
           unitId: unit.id,
           abilityId,
-          validMoves: result?.validMoves || [],
-          validTargets: result?.targetHexes || []
+          ...data
         });
       };
 
