@@ -322,6 +322,30 @@
       };
 
       // ==================== CUSTOM GAME ====================
+      const assignSquadronNames = (units, faction1, faction2) => {
+        const usedNames = new Set();
+
+        const getUniqueName = (factionId) => {
+          const availableNames = config.factions[factionId].squadronNames.filter(
+            name => !usedNames.has(name)
+          );
+
+          if (availableNames.length === 0) {
+            // Fallback se finisci i nomi
+            return `Squadron ${Math.floor(Math.random() * 1000)}`;
+          }
+
+          const name = availableNames[Math.floor(Math.random() * availableNames.length)];
+          usedNames.add(name);
+          return name;
+        };
+
+        return units.map(unit => ({
+          ...unit,
+          squadronName: getUniqueName(unit.player === 1 ? faction1 : faction2)
+        }));
+      };
+
       const startCustomGame = () => {
         // Imposta le capital ships
         setCapitalShips({
@@ -380,7 +404,14 @@
           units.push(unit);
         });
 
-        setUnits(units);
+        // Assegna nomi squadrone
+        const namedUnits = assignSquadronNames(
+          units,
+          customSetup.player1Faction,
+          customSetup.player2Faction
+        );
+
+        setUnits(namedUnits);
         setGameState('game');
       };
 
@@ -1129,7 +1160,7 @@
                         <img src={config.unitTypes[selectedUnit.type].icon} alt="" className="w-16 h-16" />
                         <div>
                           <h2 className="text-2xl font-bold text-white">{config.unitTypes[selectedUnit.type].name}</h2>
-                          <p className="text-gray-400 text-sm">{selectedUnit.id}</p>
+                          <p className="text-gray-400 text-sm">{selectedUnit.squadronName}</p>
                         </div>
                       </div>
 

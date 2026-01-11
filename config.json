@@ -40,6 +40,16 @@
       ],
       "capitalShips": [
         "mc80"
+      ],
+      "squadronNames": [
+        "Red Squadron",
+        "Gold Squadron",
+        "Blue Squadron",
+        "Green Squadron",
+        "Rogue Squadron",
+        "Phoenix Squadron",
+        "Gray Squadron",
+        "Blade Squadron"
       ]
     },
     "empire": {
@@ -53,6 +63,16 @@
       ],
       "capitalShips": [
         "isd"
+      ],
+      "squadronNames": [
+        "Alpha Squadron",
+        "Beta Squadron",
+        "Gamma Squadron",
+        "Delta Squadron",
+        "Obsidian Squadron",
+        "Onyx Squadron",
+        "Scimitar Squadron",
+        "Shadow Squadron"
       ]
     }
   },
