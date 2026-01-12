@@ -24,9 +24,21 @@
       "icon": "icons/ships/mc80liberty.png",
       "description": "A Mon Calamari cruiser with balanced defenses"
     },
+    "nebulon": {
+      "name": "Nebulon B Frigate",
+      "health": 80,
+      "icon": "icons/ships/nebulon.png",
+      "description": "A medical support frigate"
+    },
+    "victory": {
+      "name": "Victory Star Destroyer",
+      "health": 100,
+      "icon": "icons/ships/victory.png",
+      "description": "A Star Destroyer from the Clone Wars"
+    },
     "isd": {
       "name": "Imperial Star Destroyer",
-      "health": 100,
+      "health": 120,
       "icon": "icons/ships/isd.png",
       "description": "The Empire's most iconic warship"
     }
