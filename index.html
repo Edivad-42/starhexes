@@ -223,7 +223,6 @@
       const [gamePhase, setGamePhase] = useState('action'); // 'action' or 'combat'
       const [combatLog, setCombatLog] = useState([]);
       const [showCombatLog, setShowCombatLog] = useState(false);
-      const [showUnitInfo, setShowUnitInfo] = useState(false);
       const [needsAIMove, setNeedsAIMove] = useState(false);
       const [activeAbility, setActiveAbility] = useState(null);
       const [winner, setWinner] = useState(null);
@@ -986,10 +985,10 @@
                 )}
 
                 {/* Unit Info Modal */}
-                {showUnitInfo && selectedUnit && (
+                {infoTarget && (
                   <div
                     className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
-                    onClick={() => setShowUnitInfo(false)}
+                    onClick={() => setInfoTarget(false)}
                   >
                     {infoTarget.kind === 'unit' && (
                       <div
@@ -1076,7 +1075,7 @@
                         </div>
 
                         <button
-                          onClick={() => setShowUnitInfo(false)}
+                          onClick={() => setInfoTarget(false)}
                           className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
                         >
                           Close
@@ -1115,7 +1114,7 @@
                           </div>
 
                           <button
-                            onClick={() => setShowUnitInfo(false)}
+                            onClick={() => setInfoTarget(false)}
                             className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
                           >
                             Close
