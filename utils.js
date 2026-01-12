@@ -97,7 +97,7 @@ const Utils = {
 
     // ==================== AI ====================
 
-    makeAIMove: (unitsRef, activatedRef, setNeedsAIMove, setCurrentPlayer, setActivatedUnits, setUnits) => {
+    makeAIMove: (config, unitsRef, activatedRef, units, setNeedsAIMove, setCurrentPlayer, setActivatedUnits, setUnits) => {
         setNeedsAIMove(false);
 
         const aiUnits = unitsRef.current.filter(u => u.player === 2 && u.health > 0 && !activatedRef.current.has(u.id));
@@ -109,7 +109,7 @@ const Utils = {
 
         const aiUnit = aiUnits[0];
         const playerUnits = unitsRef.current.filter(u => u.player === 1 && u.health > 0);
-        const validMoves = Utils.getValidMoves(aiUnit);
+        const validMoves = Utils.getValidMoves(aiUnit, units, config);
 
         // If can't move, just activate
         if (validMoves.length === 0) {

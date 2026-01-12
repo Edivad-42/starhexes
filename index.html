@@ -447,7 +447,7 @@
             u => u.player === 1 && u.health > 0
           ); */
 
-          Utils.makeAIMove(unitsRef, activatedRef, setNeedsAIMove, setCurrentPlayer, setActivatedUnits, setUnits);
+          Utils.makeAIMove(config, unitsRef, activatedRef, units, setNeedsAIMove, setCurrentPlayer, setActivatedUnits, setUnits);
 
 /*           // SE NON CI SONO AZIONI, FINISCI IL TURNO AI
           if (!result) {
