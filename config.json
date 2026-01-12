@@ -15,16 +15,16 @@
     ]
   },
   "capitalShipTypes": {
-    "mc80": {
+    "mc80liberty": {
       "name": "MC80 Liberty Cruiser",
       "health": 100,
-      "icon": "icons/capital/mc80.png",
+      "icon": "icons/ships/mc80liberty.png",
       "description": "A Mon Calamari cruiser with balanced defenses"
     },
     "isd": {
       "name": "Imperial Star Destroyer",
       "health": 100,
-      "icon": "icons/capital/isd.png",
+      "icon": "icons/ships/isd.png",
       "description": "The Empire's most iconic warship"
     }
   },
@@ -39,7 +39,7 @@
         "bWing"
       ],
       "capitalShips": [
-        "mc80"
+        "mc80liberty"
       ],
       "squadronNames": [
         "Red Squadron",
