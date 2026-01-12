@@ -785,113 +785,125 @@
                 </div>
 
                 {/* Game Board */}
-                <div className="flex-1 bg-gray-900 flex items-center justify-center overflow-hidden">
-                  <svg viewBox="0 0 600 400" className="max-w-full max-h-full" preserveAspectRatio="xMidYMid meet" >
-                    {/* Hexes */}
-                    {Array.from({ length: config.map.height }, (_, r) =>
-                      Array.from({ length: config.map.width }, (_, q) => {
-                        if (config.map.disabledHexes.some(h => h.q === q && h.r === r)) return null;
+                <div className="flex-1 bg-gray-900 overflow-hidden">
+                  <div
+                    className="w-full h-full overflow-auto touch-pan-x touch-pan-y"
+                    style={{
+                      WebkitOverflowScrolling: 'touch',
+                      overscrollBehavior: 'contain'
+                    }}
+                  >
+                    <svg
+                      viewBox="0 0 600 400"
+                      className="min-w-[600px] min-h-[400px] md:min-w-full md:min-h-full"
+                      preserveAspectRatio="xMidYMid meet"
+                    >
+                      {/* Hexes */}
+                      {Array.from({ length: config.map.height }, (_, r) =>
+                        Array.from({ length: config.map.width }, (_, q) => {
+                          if (config.map.disabledHexes.some(h => h.q === q && h.r === r)) return null;
 
-                        const x = hexWidth * q + (r % 2) * (hexWidth / 2) + 40;
-                        const y = vertDist * r + 35;
+                          const x = hexWidth * q + (r % 2) * (hexWidth / 2) + 40;
+                          const y = vertDist * r + 35;
 
-                        const unit = units.find(u => u.q === q && u.r === r && u.health > 0);
-                        const isSelected = selectedUnit && selectedUnit.q === q && selectedUnit.r === r;
+                          const unit = units.find(u => u.q === q && u.r === r && u.health > 0);
+                          const isSelected = selectedUnit && selectedUnit.q === q && selectedUnit.r === r;
 
-                        let validMoves = [];
+                          let validMoves = [];
 
-                        if (
-                          selectedUnit &&
-                          selectedUnit.player === currentPlayer &&
-                          !activatedUnits.has(selectedUnit.id)
-                        ) {
-                          if (activeAbility?.unitId === selectedUnit.id) {
-                            validMoves = activeAbility.validMoves || [];
-                          } else {
-                            validMoves = Utils.getValidMoves(selectedUnit, units, config);
+                          if (
+                            selectedUnit &&
+                            selectedUnit.player === currentPlayer &&
+                            !activatedUnits.has(selectedUnit.id)
+                          ) {
+                            if (activeAbility?.unitId === selectedUnit.id) {
+                              validMoves = activeAbility.validMoves || [];
+                            } else {
+                              validMoves = Utils.getValidMoves(selectedUnit, units, config);
+                            }
                           }
-                        }
 
-                        const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
+                          const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
 
-                        const isAbilityTarget = activeAbility
-                          && activeAbility.unitId === selectedUnit?.id
-                          && Array.isArray(activeAbility.validTargets)
-                          && activeAbility.validTargets.some(([aq, ar]) => aq === q && ar === r);
+                          const isAbilityTarget = activeAbility
+                            && activeAbility.unitId === selectedUnit?.id
+                            && Array.isArray(activeAbility.validTargets)
+                            && activeAbility.validTargets.some(([aq, ar]) => aq === q && ar === r);
 
-                        const isP1Zone = config.capitalZones.player1.some(z => z.q === q && z.r === r);
-                        const isP2Zone = config.capitalZones.player2.some(z => z.q === q && z.r === r);
+                          const isP1Zone = config.capitalZones.player1.some(z => z.q === q && z.r === r);
+                          const isP2Zone = config.capitalZones.player2.some(z => z.q === q && z.r === r);
 
-                        let fill = '#1e293b';
-                        let stroke = '#475569';
-                        let strokeWidth = 2;
+                          let fill = '#1e293b';
+                          let stroke = '#475569';
+                          let strokeWidth = 2;
 
-                        if (isP1Zone) { fill = '#1e3a5f'; stroke = '#3b82f6'; strokeWidth = 2; }
-                        if (isP2Zone) { fill = '#4a1a1a'; stroke = '#ef4444'; strokeWidth = 2; }
-                        if (isValidMove) fill = '#064e3b';
-                        if (isSelected) fill = '#fbbf24';
-                        if (isAbilityTarget) fill = '#7f1d1d';
+                          if (isP1Zone) { fill = '#1e3a5f'; stroke = '#3b82f6'; strokeWidth = 2; }
+                          if (isP2Zone) { fill = '#4a1a1a'; stroke = '#ef4444'; strokeWidth = 2; }
+                          if (isValidMove) fill = '#064e3b';
+                          if (isSelected) fill = '#fbbf24';
+                          if (isAbilityTarget) fill = '#7f1d1d';
 
-                        return (
-                          <g key={`${q}-${r}`}>
-                            <polygon
-                              points={`${x},${y - hexSize} ${x + hexSize * 0.866},${y - hexSize / 2} ${x + hexSize * 0.866},${y + hexSize / 2} ${x},${y + hexSize} ${x - hexSize * 0.866},${y + hexSize / 2} ${x - hexSize * 0.866},${y - hexSize / 2}`}
-                              fill={fill}
-                              stroke={stroke}
-                              strokeWidth={strokeWidth}
-                              strokeLinejoin="round"
-                              onClick={() => {
-                                if (unit) {
-                                  handleUnitClick(unit);
-                                } else {
-                                  handleHexClick(q, r);
-                                }
-                              }}
-                              className="cursor-pointer hover:opacity-80"
-                            />
+                          return (
+                            <g key={`${q}-${r}`}>
+                              <polygon
+                                points={`${x},${y - hexSize} ${x + hexSize * 0.866},${y - hexSize / 2} ${x + hexSize * 0.866},${y + hexSize / 2} ${x},${y + hexSize} ${x - hexSize * 0.866},${y + hexSize / 2} ${x - hexSize * 0.866},${y - hexSize / 2}`}
+                                fill={fill}
+                                stroke={stroke}
+                                strokeWidth={strokeWidth}
+                                strokeLinejoin="round"
+                                onClick={() => {
+                                  if (unit) {
+                                    handleUnitClick(unit);
+                                  } else {
+                                    handleHexClick(q, r);
+                                  }
+                                }}
+                                className="cursor-pointer hover:opacity-80"
+                              />
 
-                            {unit && (
-                              <>
-                                <circle
-                                  cx={x}
-                                  cy={y}
-                                  r={20}
-                                  fill={config.players[`player${unit.player}`].color}
-                                  stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
-                                  strokeWidth="3"
-                                  onClick={() => handleUnitClick(unit)}
-                                  className="cursor-pointer"
-                                />
-                                <image
-                                  href={config.unitTypes[unit.type].icon}
-                                  x={x - 12}
-                                  y={y - 12}
-                                  width={24}
-                                  height={24}
-                                  style={{ pointerEvents: 'none' }}
-                                />
-                                <text
-                                  x={x}
-                                  y={y + 12}
-                                  textAnchor="middle"
-                                  fill="white"
-                                  fontSize="9"
-                                  fontWeight="bold"
-                                  style={{ pointerEvents: 'none' }}
-                                >
-                                  {Math.round(unit.health)}
-                                </text>
-                              </>
-                            )}
-                          </g>
-                        );
-                      })
-                    )}
-                  </svg>
+                              {unit && (
+                                <>
+                                  <circle
+                                    cx={x}
+                                    cy={y}
+                                    r={20}
+                                    fill={config.players[`player${unit.player}`].color}
+                                    stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
+                                    strokeWidth="3"
+                                    onClick={() => handleUnitClick(unit)}
+                                    className="cursor-pointer"
+                                  />
+                                  <image
+                                    href={config.unitTypes[unit.type].icon}
+                                    x={x - 12}
+                                    y={y - 12}
+                                    width={24}
+                                    height={24}
+                                    style={{ pointerEvents: 'none' }}
+                                  />
+                                  <text
+                                    x={x}
+                                    y={y + 12}
+                                    textAnchor="middle"
+                                    fill="white"
+                                    fontSize="9"
+                                    fontWeight="bold"
+                                    style={{ pointerEvents: 'none' }}
+                                  >
+                                    {Math.round(unit.health)}
+                                  </text>
+                                </>
+                              )}
+                            </g>
+                          );
+                        })
+                      )}
+                    </svg>
 
-                  {/* Action Buttons */}
-                  <div className="w-64 bg-gray-900 border-l border-gray-700 p-3 flex flex-col gap-2">
-                    {selectedUnit && renderUnitActions()}
+                    {/* Action Buttons */}
+                    <div className="w-64 bg-gray-900 border-l border-gray-700 p-3 flex flex-col gap-2">
+                      {selectedUnit && renderUnitActions()}
+                    </div>
                   </div>
                 </div>
 
