@@ -1,12 +1,13 @@
 {
   "name": "Star Hexes",
-  "short_name": "StarHexes",
-  "description": "Gioco tattico a turni ambientato nello spazio",
-  "start_url": ".",
-  "display": "standalone",
+  "short_name": "Star Hexes",
+  "description": "Tactical turn-based game with sci-fi setting",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
   "background_color": "#1e293b",
   "theme_color": "#1e293b",
-  "orientation": "landscape",
   "icons": [
     {
       "src": "icon-192.png",
