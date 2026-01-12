@@ -668,6 +668,10 @@
         isEngaged: (unit) => Utils.isEngaged(unit, units)
       };
 
+      // ==================== CUSTOM MATCH POINTS ====================
+      const p1Points = calculatePoints(customSetup.player1, customSetup.player1Capital);
+      const p2Points = calculatePoints(customSetup.player2, customSetup.player2Capital);
+
       const renderUnitActions = () => {
         if (!selectedUnit) return null;
 
@@ -746,7 +750,6 @@
         );
       };
 
-
       return (
         <>
           {!config && (
@@ -785,376 +788,364 @@
                 </div>
 
                 {/* Game Board */}
-                <div className="flex-1 bg-gray-900 overflow-hidden">
-                  <div
-                    className="w-full h-full overflow-auto touch-pan-x touch-pan-y"
-                    style={{
-                      WebkitOverflowScrolling: 'touch',
-                      overscrollBehavior: 'contain'
-                    }}
-                  >
-                    <svg
-                      viewBox="0 0 600 400"
-                      className="min-w-[600px] min-h-[400px] md:min-w-full md:min-h-full"
-                      preserveAspectRatio="xMidYMid meet"
-                    >
-                      {/* Hexes */}
-                      {Array.from({ length: config.map.height }, (_, r) =>
-                        Array.from({ length: config.map.width }, (_, q) => {
-                          if (config.map.disabledHexes.some(h => h.q === q && h.r === r)) return null;
+                <div className="flex-1 bg-gray-900 flex items-center justify-center overflow-hidden">
+                  <svg viewBox="0 0 600 400" className="max-w-full max-h-full" preserveAspectRatio="xMidYMid meet" >
+                    {/* Hexes */}
+                    {Array.from({ length: config.map.height }, (_, r) =>
+                      Array.from({ length: config.map.width }, (_, q) => {
+                        if (config.map.disabledHexes.some(h => h.q === q && h.r === r)) return null;
 
-                          const x = hexWidth * q + (r % 2) * (hexWidth / 2) + 40;
-                          const y = vertDist * r + 35;
+                        const x = hexWidth * q + (r % 2) * (hexWidth / 2) + 40;
+                        const y = vertDist * r + 35;
 
-                          const unit = units.find(u => u.q === q && u.r === r && u.health > 0);
-                          const isSelected = selectedUnit && selectedUnit.q === q && selectedUnit.r === r;
+                        const unit = units.find(u => u.q === q && u.r === r && u.health > 0);
+                        const isSelected = selectedUnit && selectedUnit.q === q && selectedUnit.r === r;
 
-                          let validMoves = [];
+                        let validMoves = [];
 
-                          if (
-                            selectedUnit &&
-                            selectedUnit.player === currentPlayer &&
-                            !activatedUnits.has(selectedUnit.id)
-                          ) {
-                            if (activeAbility?.unitId === selectedUnit.id) {
-                              validMoves = activeAbility.validMoves || [];
-                            } else {
-                              validMoves = Utils.getValidMoves(selectedUnit, units, config);
-                            }
+                        if (
+                          selectedUnit &&
+                          selectedUnit.player === currentPlayer &&
+                          !activatedUnits.has(selectedUnit.id)
+                        ) {
+                          if (activeAbility?.unitId === selectedUnit.id) {
+                            validMoves = activeAbility.validMoves || [];
+                          } else {
+                            validMoves = Utils.getValidMoves(selectedUnit, units, config);
                           }
-
-                          const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
-
-                          const isAbilityTarget = activeAbility
-                            && activeAbility.unitId === selectedUnit?.id
-                            && Array.isArray(activeAbility.validTargets)
-                            && activeAbility.validTargets.some(([aq, ar]) => aq === q && ar === r);
-
-                          const isP1Zone = config.capitalZones.player1.some(z => z.q === q && z.r === r);
-                          const isP2Zone = config.capitalZones.player2.some(z => z.q === q && z.r === r);
-
-                          let fill = '#1e293b';
-                          let stroke = '#475569';
-                          let strokeWidth = 2;
-
-                          if (isP1Zone) { fill = '#1e3a5f'; stroke = '#3b82f6'; strokeWidth = 2; }
-                          if (isP2Zone) { fill = '#4a1a1a'; stroke = '#ef4444'; strokeWidth = 2; }
-                          if (isValidMove) fill = '#064e3b';
-                          if (isSelected) fill = '#fbbf24';
-                          if (isAbilityTarget) fill = '#7f1d1d';
-
-                          return (
-                            <g key={`${q}-${r}`}>
-                              <polygon
-                                points={`${x},${y - hexSize} ${x + hexSize * 0.866},${y - hexSize / 2} ${x + hexSize * 0.866},${y + hexSize / 2} ${x},${y + hexSize} ${x - hexSize * 0.866},${y + hexSize / 2} ${x - hexSize * 0.866},${y - hexSize / 2}`}
-                                fill={fill}
-                                stroke={stroke}
-                                strokeWidth={strokeWidth}
-                                strokeLinejoin="round"
-                                onClick={() => {
-                                  if (unit) {
-                                    handleUnitClick(unit);
-                                  } else {
-                                    handleHexClick(q, r);
-                                  }
-                                }}
-                                className="cursor-pointer hover:opacity-80"
-                              />
-
-                              {unit && (
-                                <>
-                                  <circle
-                                    cx={x}
-                                    cy={y}
-                                    r={20}
-                                    fill={config.players[`player${unit.player}`].color}
-                                    stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
-                                    strokeWidth="3"
-                                    onClick={() => handleUnitClick(unit)}
-                                    className="cursor-pointer"
-                                  />
-                                  <image
-                                    href={config.unitTypes[unit.type].icon}
-                                    x={x - 12}
-                                    y={y - 12}
-                                    width={24}
-                                    height={24}
-                                    style={{ pointerEvents: 'none' }}
-                                  />
-                                  <text
-                                    x={x}
-                                    y={y + 12}
-                                    textAnchor="middle"
-                                    fill="white"
-                                    fontSize="9"
-                                    fontWeight="bold"
-                                    style={{ pointerEvents: 'none' }}
-                                  >
-                                    {Math.round(unit.health)}
-                                  </text>
-                                </>
-                              )}
-                            </g>
-                          );
-                        })
-                      )}
-                    </svg>
-
-                    {/* Action Buttons */}
-                    <div className="w-64 bg-gray-900 border-l border-gray-700 p-3 flex flex-col gap-2">
-                      {selectedUnit && renderUnitActions()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom Status */}
-                <div className="grid grid-cols-2 gap-1 p-1 bg-gray-900 text-xs">
-                  {/* Player 1 */}
-                  <div className="bg-blue-900 p-1 rounded">
-                    <div className="flex justify-between text-white mb-1 items-center">
-                      <div
-                        className="flex items-center gap-2"
-                        onClick={() =>
-                          setInfoTarget({
-                            kind: 'capital',
-                            data: capitalShips.player1
-                          })
                         }
-                      >
-                        <span className="font-bold text-blue-300 cursor-pointer hover:underline" >
-                          {capitalShips.player1.name}
-                        </span>
-                        <button className="text-blue-400 hover:text-blue-200" >
-                          ℹ️
-                        </button>
-                      </div>
-                      <span>{units.filter(u => u.player === 1 && u.health > 0).length} units</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="flex-1 bg-gray-700 rounded h-2">
-                        <div
-                          className="bg-blue-400 h-full"
-                          style={{ width: `${(capitalShips.player1?.currentHealth / capitalShips.player1?.health * 100) || 0}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-white text-[10px]">{capitalShips.player1?.currentHealth || 0}</span>
-                    </div>
-                  </div>
 
-                  {/* Player 2 */}
-                  <div className="bg-red-900 p-1 rounded">
-                    <div className="flex justify-between text-white mb-1 items-center">
-                      <span>{units.filter(u => u.player === 2 && u.health > 0).length} units</span>
-                      <div
-                        className="flex items-center gap-2"
-                        onClick={() =>
-                          setInfoTarget({
-                            kind: 'capital',
-                            data: capitalShips.player2
-                          })
-                        }
-                      >
-                        <button className="text-red-400 hover:text-red-200" >
-                          ℹ️
-                        </button>
-                        <span className="font-bold text-red-300 cursor-pointer hover:underline" >
-                          {capitalShips.player2.name}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="flex-1 bg-gray-700 rounded h-2">
-                        <div
-                          className="bg-red-400 h-full"
-                          style={{ width: `${(capitalShips.player2?.currentHealth / capitalShips.player2?.health * 100) || 0}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-white text-[10px]">{capitalShips.player2?.currentHealth || 0}</span>
-                    </div>
-                  </div>
-                </div>
+                        const isValidMove = validMoves.some(([mq, mr]) => mq === q && mr === r);
 
-                {/* Combat Log Modal */}
-                {showCombatLog && (
-                  <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
-                    <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4 border-4 border-yellow-500 max-h-[80vh] flex flex-col">
-                      <h2 className="text-3xl font-bold text-yellow-400 text-center mb-4">⚔️ COMBAT LOG ⚔️</h2>
+                        const isAbilityTarget = activeAbility
+                          && activeAbility.unitId === selectedUnit?.id
+                          && Array.isArray(activeAbility.validTargets)
+                          && activeAbility.validTargets.some(([aq, ar]) => aq === q && ar === r);
 
-                      <div className="flex-1 overflow-y-auto bg-gray-800 rounded p-4 mb-4 font-mono text-sm text-white">
-                        {combatLog.map((line, i) => (
-                          <div key={i} className="mb-1">{line}</div>
-                        ))}
-                      </div>
+                        const isP1Zone = config.capitalZones.player1.some(z => z.q === q && z.r === r);
+                        const isP2Zone = config.capitalZones.player2.some(z => z.q === q && z.r === r);
 
-                      <button
-                        onClick={handleCombatLogOk}
-                        className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl font-bold rounded-lg"
-                      >
-                        OK
-                      </button>
-                    </div>
-                  </div>
-                )}
+                        let fill = '#1e293b';
+                        let stroke = '#475569';
+                        let strokeWidth = 2;
 
-                {/* Unit Info Modal */}
-                {infoTarget && (
-                  <div
-                    className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
-                    onClick={() => setInfoTarget(false)}
-                  >
-                    {infoTarget.kind === 'unit' && (
-                      <div
-                        className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border-4"
-                        style={{ borderColor: config.players[`player${selectedUnit.player}`].color }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="flex items-center gap-4 mb-4">
-                          <img src={config.unitTypes[selectedUnit.type].icon} alt="" className="w-16 h-16" />
-                          <div>
-                            <h2 className="text-2xl font-bold text-white">{config.unitTypes[selectedUnit.type].name}</h2>
-                            <p className="text-gray-400 text-sm">{selectedUnit.squadronName}</p>
-                          </div>
-                        </div>
+                        if (isP1Zone) { fill = '#1e3a5f'; stroke = '#3b82f6'; strokeWidth = 2; }
+                        if (isP2Zone) { fill = '#4a1a1a'; stroke = '#ef4444'; strokeWidth = 2; }
+                        if (isValidMove) fill = '#064e3b';
+                        if (isSelected) fill = '#fbbf24';
+                        if (isAbilityTarget) fill = '#7f1d1d';
 
-                        <p className="text-gray-300 mb-4 italic">{config.unitTypes[selectedUnit.type].description}</p>
+                        return (
+                          <g key={`${q}-${r}`}>
+                            <polygon
+                              points={`${x},${y - hexSize} ${x + hexSize * 0.866},${y - hexSize / 2} ${x + hexSize * 0.866},${y + hexSize / 2} ${x},${y + hexSize} ${x - hexSize * 0.866},${y + hexSize / 2} ${x - hexSize * 0.866},${y - hexSize / 2}`}
+                              fill={fill}
+                              stroke={stroke}
+                              strokeWidth={strokeWidth}
+                              strokeLinejoin="round"
+                              onClick={() => {
+                                if (unit) {
+                                  handleUnitClick(unit);
+                                } else {
+                                  handleHexClick(q, r);
+                                }
+                              }}
+                              className="cursor-pointer hover:opacity-80"
+                            />
 
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <div className="bg-gray-700 rounded p-2">
-                            <div className="text-gray-400 text-xs mb-1">Health</div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-gray-600 rounded h-3">
-                                <div
-                                  className="bg-green-500 h-full"
-                                  style={{ width: `${(selectedUnit.health / selectedUnit.maxHealth * 100)}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-white text-sm font-bold">{Math.round(selectedUnit.health)}/{selectedUnit.maxHealth}</span>
-                            </div>
-                          </div>
-
-                          <div className="bg-gray-700 rounded p-2">
-                            <div className="text-gray-400 text-xs">Damage</div>
-                            <div className="text-white font-bold text-lg">{selectedUnit.damage}</div>
-                          </div>
-
-                          <div className="bg-gray-700 rounded p-2">
-                            <div className="text-gray-400 text-xs">Capital Damage</div>
-                            <div className="text-white font-bold text-lg">{selectedUnit.capitalDamage}</div>
-                          </div>
-                        </div>
-
-                        {/* ABILITIES */}
-                        <div className="mt-4">
-                          <h3 className="text-lg font-bold text-yellow-400 mb-2">
-                            Abilities
-                          </h3>
-
-                          <div className="space-y-2">
-                            {(config.unitTypes[selectedUnit.type].abilities || []).map(abilityId => {
-                              const ability = ABILITIES[abilityId];
-                              const state = selectedUnit.abilityStates?.[abilityId];
-
-                              if (!ability) return null;
-
-                              return (
-                                <div
-                                  key={abilityId}
-                                  className="bg-gray-700 rounded p-2 border border-gray-600"
+                            {unit && (
+                              <>
+                                <circle
+                                  cx={x}
+                                  cy={y}
+                                  r={20}
+                                  fill={config.players[`player${unit.player}`].color}
+                                  stroke={activatedUnits.has(unit.id) ? '#22c55e' : '#ffffff'}
+                                  strokeWidth="3"
+                                  onClick={() => handleUnitClick(unit)}
+                                  className="cursor-pointer"
+                                />
+                                <image
+                                  href={config.unitTypes[unit.type].icon}
+                                  x={x - 12}
+                                  y={y - 12}
+                                  width={24}
+                                  height={24}
+                                  style={{ pointerEvents: 'none' }}
+                                />
+                                <text
+                                  x={x}
+                                  y={y + 12}
+                                  textAnchor="middle"
+                                  fill="white"
+                                  fontSize="9"
+                                  fontWeight="bold"
+                                  style={{ pointerEvents: 'none' }}
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xl">{ability.icon}</span>
-                                    <span className="font-bold text-white">
-                                      {ability.name}
-                                    </span>
-                                    <span className="ml-auto text-xs text-gray-400">
-                                      {ability.type.toUpperCase()}
-                                    </span>
-                                  </div>
-
-                                  <div className="text-gray-300 text-sm mt-1">
-                                    {ability.description}
-                                  </div>
-
-                                  {state?.charges !== undefined && (
-                                    <div className="text-xs text-gray-400 mt-1">
-                                      Charges: {state.charges} / {ability.maxCharges}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => setInfoTarget(false)}
-                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
-                        >
-                          Close
-                        </button>
-                      </div>
+                                  {Math.round(unit.health)}
+                                </text>
+                              </>
+                            )}
+                          </g>
+                        );
+                      })
                     )}
-                    {infoTarget.kind === 'capital' && (
-                      <div
-                        className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border-4"
-                        style={{ borderColor: config.players[`player${infoTarget.data.owner}`].color }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="flex items-center gap-4 mb-4">
-                          <img src={infoTarget.data.icon} alt="" className="w-16 h-16" />
-                          <h2 className="text-2xl font-bold text-white">{infoTarget.data.name}</h2>
-                        </div>
+                  </svg>
 
-                        <p className="text-gray-300 mb-4 italic">{infoTarget.data.description}</p>
-
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          <div className="bg-gray-700 rounded p-2">
-                            <div className="text-gray-400 text-xs mb-1">Health</div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-gray-600 rounded h-3">
-                                <div
-                                  className="bg-green-500 h-full"
-                                  style={{ width: `${(infoTarget.data.currentHealth / infoTarget.data.health * 100)}%` }}
-                                ></div>
-                              </div>
-                              <span className="text-white text-sm font-bold">{Math.round(infoTarget.data.currentHealth)}/{infoTarget.data.health}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => setInfoTarget(false)}
-                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    )}
+                  {/* Action Buttons */}
+                  <div className="w-64 bg-gray-900 border-l border-gray-700 p-3 flex flex-col gap-2">
+                    {selectedUnit && renderUnitActions()}
                   </div>
-                )}
+                </div>
+              </div>
 
-                {winner && (
-                  <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-                    <div className="bg-gray-900 border-4 border-yellow-500 rounded-xl p-8 text-center">
-                      <h1 className="text-4xl font-bold text-yellow-400 mb-4">
-                        🏆 PLAYER {winner} WINS!
-                      </h1>
-                      <p className="text-gray-300 mb-6">
-                        {winner === 1
-                          ? 'The enemy fleet has been destroyed.'
-                          : 'Your fleet has been annihilated.'}
-                      </p>
-                      <button
-                        onClick={() => window.location.reload()}
-                        className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl rounded-lg"
-                      >
-                        Back to menu
+              {/* Bottom Status */}
+              <div className="grid grid-cols-2 gap-1 p-1 bg-gray-900 text-xs">
+                {/* Player 1 */}
+                <div className="bg-blue-900 p-1 rounded">
+                  <div className="flex justify-between text-white mb-1 items-center">
+                    <div
+                      className="flex items-center gap-2"
+                      onClick={() =>
+                        setInfoTarget({
+                          kind: 'capital',
+                          data: capitalShips.player1
+                        })
+                      }
+                    >
+                      <span className="font-bold text-blue-300 cursor-pointer hover:underline" >
+                        {capitalShips.player1.name}
+                      </span>
+                      <button className="text-blue-400 hover:text-blue-200" >
+                        ℹ️
                       </button>
                     </div>
+                    <span>{units.filter(u => u.player === 1 && u.health > 0).length} units</span>
                   </div>
-                )}
+                  <div className="flex items-center gap-1">
+                    <div className="flex-1 bg-gray-700 rounded h-2">
+                      <div
+                        className="bg-blue-400 h-full"
+                        style={{ width: `${(capitalShips.player1?.currentHealth / capitalShips.player1?.health * 100) || 0}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-white text-[10px]">{capitalShips.player1?.currentHealth || 0}</span>
+                  </div>
+                </div>
+
+                {/* Player 2 */}
+                <div className="bg-red-900 p-1 rounded">
+                  <div className="flex justify-between text-white mb-1 items-center">
+                    <span>{units.filter(u => u.player === 2 && u.health > 0).length} units</span>
+                    <div
+                      className="flex items-center gap-2"
+                      onClick={() =>
+                        setInfoTarget({
+                          kind: 'capital',
+                          data: capitalShips.player2
+                        })
+                      }
+                    >
+                      <button className="text-red-400 hover:text-red-200" >
+                        ℹ️
+                      </button>
+                      <span className="font-bold text-red-300 cursor-pointer hover:underline" >
+                        {capitalShips.player2.name}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="flex-1 bg-gray-700 rounded h-2">
+                      <div
+                        className="bg-red-400 h-full"
+                        style={{ width: `${(capitalShips.player2?.currentHealth / capitalShips.player2?.health * 100) || 0}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-white text-[10px]">{capitalShips.player2?.currentHealth || 0}</span>
+                  </div>
+                </div>
               </div>
-            </div >
+
+              {/* Combat Log Modal */}
+              {showCombatLog && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+                  <div className="bg-gray-900 rounded-lg p-6 max-w-2xl w-full mx-4 border-4 border-yellow-500 max-h-[80vh] flex flex-col">
+                    <h2 className="text-3xl font-bold text-yellow-400 text-center mb-4">⚔️ COMBAT LOG ⚔️</h2>
+
+                    <div className="flex-1 overflow-y-auto bg-gray-800 rounded p-4 mb-4 font-mono text-sm text-white">
+                      {combatLog.map((line, i) => (
+                        <div key={i} className="mb-1">{line}</div>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={handleCombatLogOk}
+                      className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl font-bold rounded-lg"
+                    >
+                      OK
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Unit Info Modal */}
+              {infoTarget && (
+                <div
+                  className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
+                  onClick={() => setInfoTarget(false)}
+                >
+                  {infoTarget.kind === 'unit' && (
+                    <div
+                      className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border-4"
+                      style={{ borderColor: config.players[`player${selectedUnit.player}`].color }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center gap-4 mb-4">
+                        <img src={config.unitTypes[selectedUnit.type].icon} alt="" className="w-16 h-16" />
+                        <div>
+                          <h2 className="text-2xl font-bold text-white">{config.unitTypes[selectedUnit.type].name}</h2>
+                          <p className="text-gray-400 text-sm">{selectedUnit.squadronName}</p>
+                        </div>
+                      </div>
+
+                      <p className="text-gray-300 mb-4 italic">{config.unitTypes[selectedUnit.type].description}</p>
+
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="bg-gray-700 rounded p-2">
+                          <div className="text-gray-400 text-xs mb-1">Health</div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-600 rounded h-3">
+                              <div
+                                className="bg-green-500 h-full"
+                                style={{ width: `${(selectedUnit.health / selectedUnit.maxHealth * 100)}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-white text-sm font-bold">{Math.round(selectedUnit.health)}/{selectedUnit.maxHealth}</span>
+                          </div>
+                        </div>
+
+                        <div className="bg-gray-700 rounded p-2">
+                          <div className="text-gray-400 text-xs">Damage</div>
+                          <div className="text-white font-bold text-lg">{selectedUnit.damage}</div>
+                        </div>
+
+                        <div className="bg-gray-700 rounded p-2">
+                          <div className="text-gray-400 text-xs">Capital Damage</div>
+                          <div className="text-white font-bold text-lg">{selectedUnit.capitalDamage}</div>
+                        </div>
+                      </div>
+
+                      {/* ABILITIES */}
+                      <div className="mt-4">
+                        <h3 className="text-lg font-bold text-yellow-400 mb-2">
+                          Abilities
+                        </h3>
+
+                        <div className="space-y-2">
+                          {(config.unitTypes[selectedUnit.type].abilities || []).map(abilityId => {
+                            const ability = ABILITIES[abilityId];
+                            const state = selectedUnit.abilityStates?.[abilityId];
+
+                            if (!ability) return null;
+
+                            return (
+                              <div
+                                key={abilityId}
+                                className="bg-gray-700 rounded p-2 border border-gray-600"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xl">{ability.icon}</span>
+                                  <span className="font-bold text-white">
+                                    {ability.name}
+                                  </span>
+                                  <span className="ml-auto text-xs text-gray-400">
+                                    {ability.type.toUpperCase()}
+                                  </span>
+                                </div>
+
+                                <div className="text-gray-300 text-sm mt-1">
+                                  {ability.description}
+                                </div>
+
+                                {state?.charges !== undefined && (
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    Charges: {state.charges} / {ability.maxCharges}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setInfoTarget(false)}
+                        className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  )}
+                  {infoTarget.kind === 'capital' && (
+                    <div
+                      className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border-4"
+                      style={{ borderColor: config.players[`player${infoTarget.data.owner}`].color }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center gap-4 mb-4">
+                        <img src={infoTarget.data.icon} alt="" className="w-16 h-16" />
+                        <h2 className="text-2xl font-bold text-white">{infoTarget.data.name}</h2>
+                      </div>
+
+                      <p className="text-gray-300 mb-4 italic">{infoTarget.data.description}</p>
+
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="bg-gray-700 rounded p-2">
+                          <div className="text-gray-400 text-xs mb-1">Health</div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-600 rounded h-3">
+                              <div
+                                className="bg-green-500 h-full"
+                                style={{ width: `${(infoTarget.data.currentHealth / infoTarget.data.health * 100)}%` }}
+                              ></div>
+                            </div>
+                            <span className="text-white text-sm font-bold">{Math.round(infoTarget.data.currentHealth)}/{infoTarget.data.health}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => setInfoTarget(false)}
+                        className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {winner && (
+                <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+                  <div className="bg-gray-900 border-4 border-yellow-500 rounded-xl p-8 text-center">
+                    <h1 className="text-4xl font-bold text-yellow-400 mb-4">
+                      🏆 PLAYER {winner} WINS!
+                    </h1>
+                    <p className="text-gray-300 mb-6">
+                      {winner === 1
+                        ? 'The enemy fleet has been destroyed.'
+                        : 'Your fleet has been annihilated.'}
+                    </p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-xl rounded-lg"
+                    >
+                      Back to menu
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {config && gameState === 'custom' && (
@@ -1405,8 +1396,10 @@
                   !customSetup.player2Faction ||
                   !customSetup.player1Capital ||
                   !customSetup.player2Capital ||
-                  customSetup.player1.length !== 3 ||
-                  customSetup.player2.length !== 3
+                  customSetup.player1.length > 1 ||
+                  customSetup.player2.length > 1 &&
+                  p1Points <= config.customSetupOptions.pointLimit &&
+                  p2Points <= config.customSetupOptions.pointLimit
                 }
                 onClick={startCustomGame}
                 className={`mt-8 px-8 py-4 rounded-lg text-xl font-bold

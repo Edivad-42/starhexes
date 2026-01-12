@@ -14,6 +14,9 @@
       }
     ]
   },
+  "customGameOptions": {
+    "pointLimit": 200
+  },
   "capitalShipTypes": {
     "mc80liberty": {
       "name": "MC80 Liberty Cruiser",

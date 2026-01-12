@@ -273,5 +273,22 @@ const Utils = {
 
         AbilitySystem.initAbilities(unit, unitType.abilities || []);
         return unit;
+    },
+
+    // ==================== POINTS ==========================
+
+    calculatePoints: (units, capitalShip) => {
+        let total = 0;
+
+        if (capitalShip) {
+            total += capitalShip.cost || 0;
+        }
+
+        units.forEach(type => {
+            total += config.unitTypes[type]?.cost || 0;
+        });
+
+        return total;
     }
+
 };
