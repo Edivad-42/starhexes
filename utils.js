@@ -109,7 +109,7 @@ const Utils = {
 
         const aiUnit = aiUnits[0];
         const playerUnits = unitsRef.current.filter(u => u.player === 1 && u.health > 0);
-        const validMoves = getValidMoves(aiUnit);
+        const validMoves = Utils.getValidMoves(aiUnit);
 
         // If can't move, just activate
         if (validMoves.length === 0) {
