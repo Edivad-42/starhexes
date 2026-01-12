@@ -439,25 +439,25 @@
       useEffect(() => {
         if (!needsAIMove || gamePhase !== 'action' || currentPlayer !== 2) return;
 
-        const timer = setTimeout(() => {
-          const aiUnits = units.filter(
+         const timer = setTimeout(() => {
+/*          const aiUnits = units.filter(
             u => u.player === 2 && !activatedUnits.has(u.id) && u.health > 0
           );
           const playerUnits = unitsRef.current.filter(
             u => u.player === 1 && u.health > 0
-          );
+          ); */
 
-          const result = Utils.makeAIMove(aiUnits, playerUnits, config);
+          Utils.makeAIMove(unitsRef, setNeedsAIMove, setCurrentPlayer, setActivatedUnits, setUnits);
 
-          // SE NON CI SONO AZIONI, FINISCI IL TURNO AI
+/*           // SE NON CI SONO AZIONI, FINISCI IL TURNO AI
           if (!result) {
             endTurn();
-          }
+          } */
         }, 1000);
 
 
         return () => clearTimeout(timer);
-      }, [needsAIMove, gamePhase, currentPlayer]);
+      }, [needsAIMove, gamePhase, currentPlayer, units, activatedUnits]);
 
       // ==================== COMBAT RESOLUTION ====================
 
