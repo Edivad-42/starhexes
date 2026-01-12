@@ -1082,46 +1082,42 @@
                         </button>
                       </div>
                     )}
-                    {infoTarget.kind === 'capital' && (() => {
-                      const ship = infoTarget.data;
+                    {infoTarget.kind === 'capital' && (
+                      <div
+                        className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border-4"
+                        style={{ borderColor: config.players[`player${infoTarget.data.owner}`].color }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center gap-4 mb-4">
+                          <img src={infoTarget.data.icon} alt="" className="w-16 h-16" />
+                          <h2 className="text-2xl font-bold text-white">{infoTarget.data.name}</h2>
+                        </div>
 
-                      return (
-                        <div
-                          className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border-4"
-                          style={{ borderColor: config.players[`player${ship.owner}`].color }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="flex items-center gap-4 mb-4">
-                            <img src={ship.icon} alt="" className="w-16 h-16" />
-                            <h2 className="text-2xl font-bold text-white">{ship.name}</h2>
-                          </div>
+                        <p className="text-gray-300 mb-4 italic">{infoTarget.data.description}</p>
 
-                          <p className="text-gray-300 mb-4 italic">{ship.description}</p>
-
-                          <div className="grid grid-cols-2 gap-3 mb-4">
-                            <div className="bg-gray-700 rounded p-2">
-                              <div className="text-gray-400 text-xs mb-1">Health</div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-gray-600 rounded h-3">
-                                  <div
-                                    className="bg-green-500 h-full"
-                                    style={{ width: `${(ship.currentHealth / ship.health * 100)}%` }}
-                                  ></div>
-                                </div>
-                                <span className="text-white text-sm font-bold">{Math.round(ship.currentHealth)}/{ship.health}</span>
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className="bg-gray-700 rounded p-2">
+                            <div className="text-gray-400 text-xs mb-1">Health</div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 bg-gray-600 rounded h-3">
+                                <div
+                                  className="bg-green-500 h-full"
+                                  style={{ width: `${(infoTarget.data.currentHealth / infoTarget.data.health * 100)}%` }}
+                                ></div>
                               </div>
+                              <span className="text-white text-sm font-bold">{Math.round(infoTarget.data.currentHealth)}/{infoTarget.data.health}</span>
                             </div>
                           </div>
-
-                          <button
-                            onClick={() => setInfoTarget(false)}
-                            className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
-                          >
-                            Close
-                          </button>
                         </div>
-                      );
-                    })}
+
+                        <button
+                          onClick={() => setInfoTarget(false)}
+                          className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
