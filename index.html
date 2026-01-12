@@ -14,6 +14,7 @@
   <link rel="icon" type="image/png" href="icon-512.png">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="gameUtils.js"></script>
   <script src="abilities.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -419,53 +420,6 @@
         setGameState('game');
       };
 
-      // ==================== HEX UTILITIES ====================
-      // Offset coordinates: even rows shift right
-      const getNeighbors = (q, r) => {
-        const evenRow = r % 2 === 0;
-        if (evenRow) {
-          return [
-            [q + 1, r], [q - 1, r],
-            [q, r - 1], [q - 1, r - 1],
-            [q, r + 1], [q - 1, r + 1]
-          ];
-        } else {
-          return [
-            [q + 1, r], [q - 1, r],
-            [q + 1, r - 1], [q, r - 1],
-            [q + 1, r + 1], [q, r + 1]
-          ];
-        }
-      };
-
-      const getUnitAt = (q, r) => {
-        return unitsRef.current.find(u => u.q === q && u.r === r && u.health > 0);
-      };
-
-      const isOccupied = (q, r, excludeId = null) => {
-        return unitsRef.current.some(u => u.q === q && u.r === r && u.id !== excludeId && u.health > 0);
-      };
-
-      const isEngaged = (unit) => {
-        const neighbors = getNeighbors(unit.q, unit.r);
-        return neighbors.some(([q, r]) => {
-          const neighbor = getUnitAt(q, r);
-          return neighbor && neighbor.player !== unit.player;
-        });
-      };
-
-      const getValidMoves = (unit) => {
-        if (isEngaged(unit)) return []; // Engaged units can't move
-
-        const neighbors = getNeighbors(unit.q, unit.r);
-        return neighbors.filter(([q, r]) =>
-          q >= 0 && q < config.map.width &&
-          r >= 0 && r < config.map.height &&
-          !isOccupied(q, r, unit.id) &&
-          !config.map.disabledHexes.some(hex => hex.q === q && hex.r === r)
-        );
-      };
-
       // ==================== CHECK ALL UNITS ACTIVATED ====================
       useEffect(() => {
         if (gamePhase !== 'action') return;
@@ -477,7 +431,7 @@
 
         if (allActivated) {
           console.log('All units activated - starting combat');
-          resolveCombat();
+          GameUtils.resolveCombat(unitsRef.current, capitalShipsRef.current, config)
         }
       }, [activatedUnits, gamePhase, units]);
 
@@ -486,180 +440,15 @@
         if (!needsAIMove || gamePhase !== 'action' || currentPlayer !== 2) return;
 
         const timer = setTimeout(() => {
-          makeAIMove();
+          const aiUnits = unitsRef.current.filter(u => u.player === 2 && u.health > 0 && !activatedRef.current.has(u.id));
+          const playerUnits = unitsRef.current.filter(u => u.player === 1 && u.health > 0);
+          GameUtils.makeAIMove(aiUnits, playerUnits, config);
         }, 1000);
 
         return () => clearTimeout(timer);
       }, [needsAIMove, gamePhase, currentPlayer]);
 
-      const makeAIMove = () => {
-        setNeedsAIMove(false);
-
-        const aiUnits = unitsRef.current.filter(u => u.player === 2 && u.health > 0 && !activatedRef.current.has(u.id));
-
-        if (aiUnits.length === 0) {
-          setCurrentPlayer(1);
-          return;
-        }
-
-        const aiUnit = aiUnits[0];
-        const playerUnits = unitsRef.current.filter(u => u.player === 1 && u.health > 0);
-        const validMoves = getValidMoves(aiUnit);
-
-        // If can't move, just activate
-        if (validMoves.length === 0) {
-          setActivatedUnits(prev => new Set([...prev, aiUnit.id]));
-          setCurrentPlayer(1);
-          return;
-        }
-
-        // Simple AI: move towards nearest enemy
-        let bestMove = validMoves[0];
-        let minDistance = Infinity;
-
-        validMoves.forEach(([mq, mr]) => {
-          playerUnits.forEach(pUnit => {
-            const dist = Math.abs(mq - pUnit.q) + Math.abs(mr - pUnit.r);
-            if (dist < minDistance) {
-              minDistance = dist;
-              bestMove = [mq, mr];
-            }
-          });
-        });
-
-        setUnits(prevUnits => prevUnits.map(u =>
-          u.id === aiUnit.id ? { ...u, q: bestMove[0], r: bestMove[1] } : u
-        ));
-        setActivatedUnits(prev => new Set([...prev, aiUnit.id]));
-        setCurrentPlayer(1);
-      };
-
-      // ==================== VICTORY CONDITIONS ====================
-      const checkVictory = (units, capitalShips) => {
-        const p1UnitsAlive = units.some(u => u.player === 1 && u.health > 0);
-        const p2UnitsAlive = units.some(u => u.player === 2 && u.health > 0);
-
-        if (!p1UnitsAlive || capitalShips.player1.currentHealth <= 0) {
-          return 2;
-        }
-
-        if (!p2UnitsAlive || capitalShips.player2.currentHealth <= 0) {
-          return 1;
-        }
-
-        return null;
-      };
-
       // ==================== COMBAT RESOLUTION ====================
-      const resolveCombat = () => {
-        console.log('=== COMBAT START ===');
-        const log = [];
-
-        // Get snapshot of alive units
-        const aliveUnits = unitsRef.current.filter(u => u.health > 0);
-
-        log.push('=== COMBAT PHASE ===');
-        log.push(`Units alive: ${aliveUnits.map(u => `${u.id}(${u.health}HP)`).join(', ')}`);
-        log.push('');
-
-        // Calculate damage for each unit
-        const damageQueue = {};
-        aliveUnits.forEach(u => damageQueue[u.id] = 0);
-
-        log.push('--- ATTACKS ---');
-        aliveUnits.forEach(attacker => {
-          const neighbors = getNeighbors(attacker.q, attacker.r);
-          const enemies = aliveUnits.filter(unit => {
-            return unit.player !== attacker.player &&
-              neighbors.some(([nq, nr]) => unit.q === nq && unit.r === nr);
-          });
-
-          if (enemies.length === 0) {
-            log.push(`${attacker.id}: No adjacent enemies`);
-            return;
-          }
-
-          const damagePerEnemy = attacker.damage / enemies.length;
-          log.push(`${attacker.id} (${attacker.damage} dmg) → ${enemies.length} enemies = ${damagePerEnemy.toFixed(1)} dmg each`);
-
-          enemies.forEach(enemy => {
-            damageQueue[enemy.id] += damagePerEnemy;
-            log.push(`  → ${enemy.id} receives ${damagePerEnemy.toFixed(1)} dmg`);
-          });
-        });
-
-        log.push('');
-        log.push('--- DAMAGE APPLICATION ---');
-
-        // Apply damage
-        const updatedUnits = unitsRef.current.map(unit => {
-          if (unit.health <= 0) return unit;
-
-          const damage = damageQueue[unit.id] || 0;
-          if (damage > 0) {
-            const newHealth = Math.max(0, unit.health - damage);
-            log.push(`${unit.id}: ${unit.health.toFixed(1)} - ${damage.toFixed(1)} = ${newHealth.toFixed(1)} HP ${newHealth === 0 ? '💀' : ''}`);
-            return { ...unit, health: newHealth };
-          }
-          return unit;
-        });
-
-        log.push('');
-        log.push('--- CAPITAL SHIP ATTACKS ---');
-
-        // Capital ship damage
-        let newCapitalShips = { ...capitalShipsRef.current };
-        let capitalDamaged = false;
-
-        aliveUnits.forEach(unit => {
-          const isInP1Zone = config.capitalZones.player1.some(z => z.q === unit.q && z.r === unit.r);
-          const isInP2Zone = config.capitalZones.player2.some(z => z.q === unit.q && z.r === unit.r);
-          const isInEnemyZone = unit.player === 1 ? isInP2Zone : isInP1Zone;
-
-          if (!isInEnemyZone) return;
-
-          const neighbors = getNeighbors(unit.q, unit.r);
-          const hasEnemies = aliveUnits.some(other => {
-            return other.player !== unit.player &&
-              neighbors.some(([nq, nr]) => other.q === nq && other.r === nr);
-          });
-
-          if (hasEnemies) {
-            log.push(`${unit.id}: In enemy zone but ENGAGED - no capital damage`);
-            return;
-          }
-
-          const targetShip = unit.player === 1 ? 'player2' : 'player1';
-          const oldHealth = newCapitalShips[targetShip].currentHealth;
-          newCapitalShips[targetShip] = {
-            ...newCapitalShips[targetShip],
-            currentHealth: Math.max(0, oldHealth - unit.capitalDamage)
-          };
-
-          capitalDamaged = true;
-          log.push(`${unit.id}: Strikes ${newCapitalShips[targetShip].name} for ${unit.capitalDamage} dmg (${oldHealth} → ${newCapitalShips[targetShip].currentHealth})`);
-        });
-
-        if (!capitalDamaged) {
-          log.push('No capital ship damage');
-        }
-
-        log.push('');
-        log.push('=== COMBAT END ===');
-
-        console.log('Combat log:', log);
-
-        AbilitySystem.resetCooldowns(updatedUnits);
-        setUnits(updatedUnits);
-        setCapitalShips(newCapitalShips);
-        setCombatLog(log);
-        setShowCombatLog(true);
-        setGamePhase('combat');
-        const victory = checkVictory(updatedUnits, newCapitalShips);
-        if (victory) {
-          setWinner(victory);
-        }
-      };
 
       const handleCombatLogOk = () => {
         console.log('Combat log OK');
@@ -703,7 +492,7 @@
           unit.player === currentPlayer &&
           !activatedUnits.has(unit.id)
         ) {
-          const moves = getValidMoves(unit);
+          const moves = GameUtils.getValidMoves(unit, units, config);
           setCurrentValidHexes(moves);
         } else {
           setCurrentValidHexes([]);
@@ -746,7 +535,7 @@
         if (selectedUnit.player !== currentPlayer) return;
         if (activatedUnits.has(selectedUnit.id)) return;
 
-        const validMoves = getValidMoves(selectedUnit);
+        const validMoves = GameUtils.getValidMoves(selectedUnit, units, config);
         const isValid = validMoves.some(([mq, mr]) => mq === q && mr === r);
 
         if (!isValid) return;
@@ -794,7 +583,7 @@
           const result = ability.effect(
             unit,
             gameStateForAbilities,
-            { getNeighbors }
+            { getNeighbors: GameUtils.getNeighbors }
           );
           data.validMoves = result?.validMoves || [];
         }
@@ -803,7 +592,7 @@
           const result = ability.effect(
             unit,
             gameStateForAbilities,
-            { getNeighbors }
+            { getNeighbors: GameUtils.getNeighbors }
           );
           data.validTargets = result?.targetHexes || [];
         }
@@ -858,9 +647,9 @@
         : null;
       const gameStateForAbilities = {
         config,
-        getUnitAt,
-        isOccupied,
-        isEngaged
+        getUnitAt: (q, r) => GameUtils.getUnitAt(units, q, r),
+        isOccupied: (q, r, excludeId) => GameUtils.isOccupied(units, q, r, excludeId),
+        isEngaged: (unit) => GameUtils.isEngaged(unit, units)
       };
 
       const renderUnitActions = () => {
@@ -1003,7 +792,7 @@
                           if (activeAbility?.unitId === selectedUnit.id) {
                             validMoves = activeAbility.validMoves || [];
                           } else {
-                            validMoves = getValidMoves(selectedUnit);
+                            validMoves = GameUtils.getValidMoves(selectedUnit, units, config);
                           }
                         }
 
