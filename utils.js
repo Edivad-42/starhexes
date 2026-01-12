@@ -284,8 +284,8 @@ const Utils = {
             total += capitalShip.cost || 0;
         }
 
-        units.forEach(type => {
-            total += config.unitTypes[type]?.cost || 0;
+        units.forEach(unit => {
+            total += unit.cost || 0;
         });
 
         return total;
