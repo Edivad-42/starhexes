@@ -141,7 +141,9 @@ const Utils = {
 
     // ==================== COMBAT RESOLUTION ====================
 
-    resolveCombat: (units, capitalShips, config) => {
+    resolveCombat: (units, capitalShips, config, setUnits, setCapitalShips, setCombatLog, setShowCombatLog,
+        setGamePhase, setWinner
+    ) => {
         const log = [];
         const aliveUnits = units.filter(u => u.health > 0);
 
@@ -242,11 +244,15 @@ const Utils = {
         // Reset cooldowns
         AbilitySystem.resetCooldowns(updatedUnits);
 
-        return {
-            updatedUnits,
-            newCapitalShips,
-            log
-        };
+        setUnits(updatedUnits);
+        setCapitalShips(newCapitalShips);
+        setCombatLog(log);
+        setShowCombatLog(true);
+        setGamePhase('combat');
+        const victory = Utils.checkVictory(updatedUnits, newCapitalShips);
+        if (victory) {
+            setWinner(victory);
+        }
     },
 
     // ==================== UNIT CREATION ====================

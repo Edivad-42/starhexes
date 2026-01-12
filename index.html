@@ -431,7 +431,8 @@
 
         if (allActivated) {
           console.log('All units activated - starting combat');
-          Utils.resolveCombat(unitsRef.current, capitalShipsRef.current, config)
+          Utils.resolveCombat(unitsRef.current, capitalShipsRef.current, config,
+            setUnits, setCapitalShips, setCombatLog, setShowCombatLog, setGamePhase, setWinner);
         }
       }, [activatedUnits, gamePhase, units]);
 
@@ -439,20 +440,20 @@
       useEffect(() => {
         if (!needsAIMove || gamePhase !== 'action' || currentPlayer !== 2) return;
 
-         const timer = setTimeout(() => {
-/*          const aiUnits = units.filter(
-            u => u.player === 2 && !activatedUnits.has(u.id) && u.health > 0
-          );
-          const playerUnits = unitsRef.current.filter(
-            u => u.player === 1 && u.health > 0
-          ); */
+        const timer = setTimeout(() => {
+          /*          const aiUnits = units.filter(
+                      u => u.player === 2 && !activatedUnits.has(u.id) && u.health > 0
+                    );
+                    const playerUnits = unitsRef.current.filter(
+                      u => u.player === 1 && u.health > 0
+                    ); */
 
           Utils.makeAIMove(config, unitsRef, activatedRef, units, setNeedsAIMove, setCurrentPlayer, setActivatedUnits, setUnits);
 
-/*           // SE NON CI SONO AZIONI, FINISCI IL TURNO AI
-          if (!result) {
-            endTurn();
-          } */
+          /*           // SE NON CI SONO AZIONI, FINISCI IL TURNO AI
+                    if (!result) {
+                      endTurn();
+                    } */
         }, 1000);
 
 
@@ -667,7 +668,7 @@
         if (!selectedUnit) return null;
 
         const isMine =
-          selectedUnit.player === currentPlayer &&
+          selectedUnit.player === 1 &&
           gamePhase === 'action';
 
         const isActivated = activatedUnits.has(selectedUnit.id);
