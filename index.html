@@ -14,7 +14,7 @@
   <link rel="icon" type="image/png" href="icon-512.png">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="gameUtils.js"></script>
+  <script src="Utils.js"></script>
   <script src="abilities.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -431,7 +431,7 @@
 
         if (allActivated) {
           console.log('All units activated - starting combat');
-          GameUtils.resolveCombat(unitsRef.current, capitalShipsRef.current, config)
+          Utils.resolveCombat(unitsRef.current, capitalShipsRef.current, config)
         }
       }, [activatedUnits, gamePhase, units]);
 
@@ -442,7 +442,7 @@
         const timer = setTimeout(() => {
           const aiUnits = unitsRef.current.filter(u => u.player === 2 && u.health > 0 && !activatedRef.current.has(u.id));
           const playerUnits = unitsRef.current.filter(u => u.player === 1 && u.health > 0);
-          GameUtils.makeAIMove(aiUnits, playerUnits, config);
+          Utils.makeAIMove(aiUnits, playerUnits, config);
         }, 1000);
 
         return () => clearTimeout(timer);
@@ -492,7 +492,7 @@
           unit.player === currentPlayer &&
           !activatedUnits.has(unit.id)
         ) {
-          const moves = GameUtils.getValidMoves(unit, units, config);
+          const moves = Utils.getValidMoves(unit, units, config);
           setCurrentValidHexes(moves);
         } else {
           setCurrentValidHexes([]);
@@ -535,7 +535,7 @@
         if (selectedUnit.player !== currentPlayer) return;
         if (activatedUnits.has(selectedUnit.id)) return;
 
-        const validMoves = GameUtils.getValidMoves(selectedUnit, units, config);
+        const validMoves = Utils.getValidMoves(selectedUnit, units, config);
         const isValid = validMoves.some(([mq, mr]) => mq === q && mr === r);
 
         if (!isValid) return;
@@ -583,7 +583,7 @@
           const result = ability.effect(
             unit,
             gameStateForAbilities,
-            { getNeighbors: GameUtils.getNeighbors }
+            { getNeighbors: Utils.getNeighbors }
           );
           data.validMoves = result?.validMoves || [];
         }
@@ -592,7 +592,7 @@
           const result = ability.effect(
             unit,
             gameStateForAbilities,
-            { getNeighbors: GameUtils.getNeighbors }
+            { getNeighbors: Utils.getNeighbors }
           );
           data.validTargets = result?.targetHexes || [];
         }
@@ -647,9 +647,9 @@
         : null;
       const gameStateForAbilities = {
         config,
-        getUnitAt: (q, r) => GameUtils.getUnitAt(units, q, r),
-        isOccupied: (q, r, excludeId) => GameUtils.isOccupied(units, q, r, excludeId),
-        isEngaged: (unit) => GameUtils.isEngaged(unit, units)
+        getUnitAt: (q, r) => Utils.getUnitAt(units, q, r),
+        isOccupied: (q, r, excludeId) => Utils.isOccupied(units, q, r, excludeId),
+        isEngaged: (unit) => Utils.isEngaged(unit, units)
       };
 
       const renderUnitActions = () => {
@@ -792,7 +792,7 @@
                           if (activeAbility?.unitId === selectedUnit.id) {
                             validMoves = activeAbility.validMoves || [];
                           } else {
-                            validMoves = GameUtils.getValidMoves(selectedUnit, units, config);
+                            validMoves = Utils.getValidMoves(selectedUnit, units, config);
                           }
                         }
 
