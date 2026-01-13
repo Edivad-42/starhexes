@@ -1311,10 +1311,7 @@
                                     onClick={() =>
                                       setCustomSetup(s => ({
                                         ...s,
-                                        player1: {
-                                          ...s.player1,
-                                          units: s.player1.filter((_, idx) => idx !== i)
-                                        }
+                                        player1: s.player1.filter((_, idx) => idx !== i)
                                       }))
                                     }
                                     className="text-red-400 hover:text-red-300"
@@ -1484,10 +1481,7 @@
                                     onClick={() =>
                                       setCustomSetup(s => ({
                                         ...s,
-                                        player2: {
-                                          ...s.player2,
-                                          units: s.player2.filter((_, idx) => idx !== i)
-                                        }
+                                        player2: s.player2.filter((_, idx) => idx !== i)
                                       }))
                                     }
                                     className="text-red-400 hover:text-red-300"
