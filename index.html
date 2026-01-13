@@ -1510,8 +1510,8 @@
                   !customSetup.player2Capital ||
                   customSetup.player1.length < 1 ||
                   customSetup.player2.length < 1 ||
-                  p1Points > config.customSetupOptions.pointLimit ||
-                  p2Points > config.customSetupOptions.pointLimit
+                  p1Points > config.customGameOptions.pointLimit ||
+                  p2Points > config.customGameOptions.pointLimit
                 }
                 onClick={startCustomGame}
                 className={`mt-8 px-8 py-4 rounded-lg text-xl font-bold
@@ -1521,8 +1521,8 @@
                     !customSetup.player2Capital ||
                     customSetup.player1.length < 1 ||
                     customSetup.player2.length < 1 ||
-                    p1Points > config.customSetupOptions.pointLimit ||
-                    p2Points > config.customSetupOptions.pointLimit
+                    p1Points > config.customGameOptions.pointLimit ||
+                    p2Points > config.customGameOptions.pointLimit
                     ? 'bg-gray-600 opacity-40 cursor-not-allowed'
                     : 'bg-green-600 hover:bg-green-700'}
       `}
