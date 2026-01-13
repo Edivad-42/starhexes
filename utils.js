@@ -281,7 +281,7 @@ const Utils = {
         let total = 0;
 
         if (capitalType) {
-            total += config.capitalShipsType[capitalType].cost || 0;
+            total += config.capitalShipTypes[capitalType].cost || 0;
         }
 
         unitTypes.forEach(type => {
