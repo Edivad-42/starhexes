@@ -277,18 +277,17 @@ const Utils = {
 
     // ==================== POINTS ==========================
 
-    calculatePoints: (units, capitalShip) => {
+    calculatePoints: (unitTypes, capitalType, config) => {
         let total = 0;
 
-        if (capitalShip) {
-            total += capitalShip.cost || 0;
+        if (capitalType) {
+            total += config.capitalShips[capitalType].cost || 0;
         }
 
-        units.forEach(unit => {
-            total += unit.cost || 0;
+        unitTypes.forEach(type => {
+            total += config.unitTypes[type].cost || 0;
         });
 
         return total;
     }
-
 };
