@@ -669,8 +669,12 @@
       };
 
       // ==================== CUSTOM MATCH POINTS ====================
-      const p1Points = useCallback(() => { Utils.calculatePoints(customSetup.player1, customSetup.player1Capital) }, [customSetup]);
-      const p2Points = useCallback(() => { Utils.calculatePoints(customSetup.player2, customSetup.player2Capital) }, [customSetup]);
+      const p1Points = useCallback(() => {
+        return Utils.calculatePoints(customSetup.player1, customSetup.player1Capital);
+      }, [customSetup.player1, customSetup.player1Capital]);
+      const p2Points = useCallback(() => {
+        return Utils.calculatePoints(customSetup.player2, customSetup.player2Capital);
+      }, [customSetup.player2, customSetup.player2Capital]);
 
       const renderUnitActions = () => {
         if (!selectedUnit) return null;
