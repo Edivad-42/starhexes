@@ -199,7 +199,7 @@
   </script>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect, useCallback, useRef } = React;
 
     const StarHexesGame = () => {
       // ==================== STATE ====================
@@ -669,8 +669,8 @@
       };
 
       // ==================== CUSTOM MATCH POINTS ====================
-      const p1Points = Utils.calculatePoints(customSetup.player1, customSetup.player1Capital);
-      const p2Points = Utils.calculatePoints(customSetup.player2, customSetup.player2Capital);
+      const p1Points = useCallback(() => { Utils.calculatePoints(customSetup.player1, customSetup.player1Capital) }, [customSetup]);
+      const p2Points = useCallback(() => { Utils.calculatePoints(customSetup.player2, customSetup.player2Capital) }, [customSetup]);
 
       const renderUnitActions = () => {
         if (!selectedUnit) return null;
@@ -1232,17 +1232,15 @@
 
                           {/* SELEZIONE UNITÀ */}
                           <h3 className="text-sm text-gray-400 mb-2">
-                            Select Units ({customSetup.player1.length}/3):
+                            Select Units:
                           </h3>
                           <div className="grid grid-cols-2 gap-2">
                             {config.factions[customSetup.player1Faction].units.map(type => {
                               const unit = config.unitTypes[type];
-                              const disabled = customSetup.player1.length >= 3;
 
                               return (
                                 <button
                                   key={type}
-                                  disabled={disabled}
                                   onClick={() =>
                                     setCustomSetup(s => ({
                                       ...s,
@@ -1408,17 +1406,15 @@
 
                           {/* SELEZIONE UNITÀ */}
                           <h3 className="text-sm text-gray-400 mb-2">
-                            Select Units ({customSetup.player2.length}/3):
+                            Select Units:
                           </h3>
                           <div className="grid grid-cols-2 gap-2">
                             {config.factions[customSetup.player2Faction].units.map(type => {
                               const unit = config.unitTypes[type];
-                              const disabled = customSetup.player2.length >= 3;
 
                               return (
                                 <button
                                   key={type}
-                                  disabled={disabled}
                                   onClick={() =>
                                     setCustomSetup(s => ({
                                       ...s,
@@ -1516,17 +1512,23 @@
                   !customSetup.player2Faction ||
                   !customSetup.player1Capital ||
                   !customSetup.player2Capital ||
-                  customSetup.player1.length > 1 ||
-                  customSetup.player2.length > 1 &&
-                  p1Points <= config.customSetupOptions.pointLimit &&
-                  p2Points <= config.customSetupOptions.pointLimit
+                  customSetup.player1.length < 1 ||
+                  customSetup.player2.length < 1 ||
+                  p1Points > config.customSetupOptions.pointLimit ||
+                  p2Points > config.customSetupOptions.pointLimit
                 }
                 onClick={startCustomGame}
                 className={`mt-8 px-8 py-4 rounded-lg text-xl font-bold
-        ${customSetup.player1Faction && customSetup.player2Faction &&
-                    customSetup.player1.length === 3 && customSetup.player2.length === 3
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-gray-600 opacity-40 cursor-not-allowed'}
+                  ${!customSetup.player1Faction ||
+                    !customSetup.player2Faction ||
+                    !customSetup.player1Capital ||
+                    !customSetup.player2Capital ||
+                    customSetup.player1.length < 1 ||
+                    customSetup.player2.length < 1 ||
+                    p1Points > config.customSetupOptions.pointLimit ||
+                    p2Points > config.customSetupOptions.pointLimit
+                    ? 'bg-gray-600 opacity-40 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700'}
       `}
               >
                 Start Match
