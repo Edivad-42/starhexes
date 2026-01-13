@@ -199,7 +199,7 @@
   </script>
 
   <script type="text/babel">
-    const { useState, useEffect, useCallback, useRef } = React;
+    const { useState, useEffect, useMemo, useRef } = React;
 
     const StarHexesGame = () => {
       // ==================== STATE ====================
@@ -669,10 +669,10 @@
       };
 
       // ==================== CUSTOM MATCH POINTS ====================
-      const p1Points = useCallback(() => {
+      const p1Points = useMemo(() => {
         return Utils.calculatePoints(customSetup.player1, customSetup.player1Capital, config);
       }, [customSetup.player1, customSetup.player1Capital]);
-      const p2Points = useCallback(() => {
+      const p2Points = useMemo(() => {
         return Utils.calculatePoints(customSetup.player2, customSetup.player2Capital, config);
       }, [customSetup.player2, customSetup.player2Capital]);
 
