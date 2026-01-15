@@ -1,6 +1,108 @@
-// Utils.js - Utility functions for Star Hexes
+import { ABILITIES } from './abilities';
 
-const Utils = {
+// Utility functions for Star Hexes
+export const Utils = {
+        // ==================== ABILITIES ========================
+
+    // Inizializza lo stato delle abilità per un'unità
+    initAbilities: (unit, abilityNames) => {
+        unit.abilityStates = {};
+        unit.activeAbility = null;
+
+        abilityNames.forEach(abilityName => {
+            const ability = ABILITIES[abilityName];
+            if (ability && ability.type === 'active') {
+                unit.abilityStates[abilityName] = {
+                    charges: ability.charges,
+                    cooldown: 0,
+                    active: false
+                };
+            }
+        });
+    },
+
+    // Resetta i cooldown a fine turno
+    resetCooldowns: (units) => {
+        units.forEach(unit => {
+            if (unit.abilityStates) {
+                Object.keys(unit.abilityStates).forEach(abilityName => {
+                    const state = unit.abilityStates[abilityName];
+                    if (state.cooldown > 0) {
+                        state.cooldown--;
+                    }
+                    // Reset abilità attive che durano 1 turno
+                    if (state.active) {
+                        state.active = false;
+                    }
+                });
+            }
+        });
+    },
+
+    // Ottieni abilità disponibili per un'unità
+    getAvailableAbilities: (unit, gameState) => {
+        if (!gameState.config.unitTypes[unit.type].abilities) return [];
+        if (!unit.abilityStates) return [];
+
+        return gameState.config.unitTypes[unit.type].abilities.map(abilityName => {
+            const ability = ABILITIES[abilityName];
+            const state = unit.abilityStates[abilityName];
+
+            return {
+                id: abilityName,
+                ...ability,
+                state,
+                canUse: ability.type === 'active'
+                    ? ability.canUse(unit, gameState)
+                    : false
+            };
+        });
+    },
+
+    // Applica modificatori passivi ai danni ricevuti
+    applyPassiveDefense: (unit, damage, config) => {
+        if (!config.unitTypes[unit.type].abilities) return damage;
+
+        let modifiedDamage = damage;
+        config.unitTypes[unit.type].abilities.forEach(abilityName => {
+            const ability = ABILITIES[abilityName];
+            if (ability && ability.type === 'passive' && ability.trigger === 'onDamage') {
+                modifiedDamage = ability.effect(unit, modifiedDamage);
+            }
+        });
+
+        return modifiedDamage;
+    },
+
+    // Applica modificatori passivi ai danni inflitti
+    applyPassiveAttack: (unit, damage, config) => {
+        if (!config.unitTypes[unit.type].abilities) return damage;
+
+        let modifiedDamage = damage;
+        config.unitTypes[unit.type].abilities.forEach(abilityName => {
+            const ability = ABILITIES[abilityName];
+            if (ability && ability.type === 'passive' && ability.trigger === 'onAttack') {
+                modifiedDamage = ability.effect(unit, modifiedDamage);
+            }
+        });
+
+        // Controlla anche abilità attive temporanee (es. preciseShot)
+        if (unit.abilityStates) {
+            Object.keys(unit.abilityStates).forEach(abilityName => {
+                const ability = ABILITIES[abilityName];
+                const state = unit.abilityStates[abilityName];
+                if (ability && ability.trigger === 'combat' && state.active) {
+                    const result = ability.effect(unit, {});
+                    if (result.damageMultiplier) {
+                        modifiedDamage *= result.damageMultiplier;
+                    }
+                }
+            });
+        }
+
+        return modifiedDamage;
+    },
+
     // ==================== HEX UTILITIES ====================
 
     // Get neighbor hexes using offset coordinates (even rows shift right)
@@ -169,14 +271,14 @@ const Utils = {
             }
 
             // Apply passive attack modifiers
-            let attackDamage = AbilitySystem.applyPassiveAttack(attacker, attacker.damage, config);
+            let attackDamage = Utils.applyPassiveAttack(attacker, attacker.damage, config);
             const damagePerEnemy = attackDamage / enemies.length;
 
             log.push(`${attacker.squadronName || attacker.id} (${attackDamage.toFixed(1)} dmg) → ${enemies.length} enemies = ${damagePerEnemy.toFixed(1)} dmg each`);
 
             enemies.forEach(enemy => {
                 // Apply passive defense modifiers
-                const finalDamage = AbilitySystem.applyPassiveDefense(enemy, damagePerEnemy, config);
+                const finalDamage = Utils.applyPassiveDefense(enemy, damagePerEnemy, config);
                 damageQueue[enemy.id] += finalDamage;
                 log.push(`  → ${enemy.squadronName || enemy.id} receives ${finalDamage.toFixed(1)} dmg`);
             });
@@ -242,7 +344,7 @@ const Utils = {
         log.push('=== COMBAT END ===');
 
         // Reset cooldowns
-        AbilitySystem.resetCooldowns(updatedUnits);
+        Utils.resetCooldowns(updatedUnits);
 
         setUnits(updatedUnits);
         setCapitalShips(newCapitalShips);
@@ -271,7 +373,7 @@ const Utils = {
             capitalDamage: unitType.capitalDamage
         };
 
-        AbilitySystem.initAbilities(unit, unitType.abilities || []);
+        Utils.initAbilities(unit, unitType.abilities || []);
         return unit;
     },
 
@@ -289,5 +391,5 @@ const Utils = {
         });
 
         return total;
-    }
+    },
 };

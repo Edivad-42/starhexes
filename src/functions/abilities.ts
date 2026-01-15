@@ -1,5 +1,5 @@
 // Sistema di abilità per Star Hexes
-const ABILITIES = {
+export const ABILITIES = {
     // ==================== ABILITÀ MOVIMENTO ====================
 
     doubleMove: {
@@ -245,107 +245,5 @@ const ABILITIES = {
         effect: (unit, damage) => {
             return damage * 0.8;
         }
-    }
-};
-
-// Funzioni helper per il sistema abilità
-const AbilitySystem = {
-    // Inizializza lo stato delle abilità per un'unità
-    initAbilities: (unit, abilityNames) => {
-        unit.abilityStates = {};
-        unit.activeAbility = null;
-
-        abilityNames.forEach(abilityName => {
-            const ability = ABILITIES[abilityName];
-            if (ability && ability.type === 'active') {
-                unit.abilityStates[abilityName] = {
-                    charges: ability.charges,
-                    cooldown: 0,
-                    active: false
-                };
-            }
-        });
-    },
-
-    // Resetta i cooldown a fine turno
-    resetCooldowns: (units) => {
-        units.forEach(unit => {
-            if (unit.abilityStates) {
-                Object.keys(unit.abilityStates).forEach(abilityName => {
-                    const state = unit.abilityStates[abilityName];
-                    if (state.cooldown > 0) {
-                        state.cooldown--;
-                    }
-                    // Reset abilità attive che durano 1 turno
-                    if (state.active) {
-                        state.active = false;
-                    }
-                });
-            }
-        });
-    },
-
-    // Ottieni abilità disponibili per un'unità
-    getAvailableAbilities: (unit, gameState) => {
-        if (!gameState.config.unitTypes[unit.type].abilities) return [];
-        if (!unit.abilityStates) return [];
-
-        return gameState.config.unitTypes[unit.type].abilities.map(abilityName => {
-            const ability = ABILITIES[abilityName];
-            const state = unit.abilityStates[abilityName];
-
-            return {
-                id: abilityName,
-                ...ability,
-                state,
-                canUse: ability.type === 'active'
-                    ? ability.canUse(unit, gameState)
-                    : false
-            };
-        });
-    },
-
-    // Applica modificatori passivi ai danni ricevuti
-    applyPassiveDefense: (unit, damage, config) => {
-        if (!config.unitTypes[unit.type].abilities) return damage;
-
-        let modifiedDamage = damage;
-        config.unitTypes[unit.type].abilities.forEach(abilityName => {
-            const ability = ABILITIES[abilityName];
-            if (ability && ability.type === 'passive' && ability.trigger === 'onDamage') {
-                modifiedDamage = ability.effect(unit, modifiedDamage);
-            }
-        });
-
-        return modifiedDamage;
-    },
-
-    // Applica modificatori passivi ai danni inflitti
-    applyPassiveAttack: (unit, damage, config) => {
-        if (!config.unitTypes[unit.type].abilities) return damage;
-
-        let modifiedDamage = damage;
-        config.unitTypes[unit.type].abilities.forEach(abilityName => {
-            const ability = ABILITIES[abilityName];
-            if (ability && ability.type === 'passive' && ability.trigger === 'onAttack') {
-                modifiedDamage = ability.effect(unit, modifiedDamage);
-            }
-        });
-
-        // Controlla anche abilità attive temporanee (es. preciseShot)
-        if (unit.abilityStates) {
-            Object.keys(unit.abilityStates).forEach(abilityName => {
-                const ability = ABILITIES[abilityName];
-                const state = unit.abilityStates[abilityName];
-                if (ability && ability.trigger === 'combat' && state.active) {
-                    const result = ability.effect(unit, {});
-                    if (result.damageMultiplier) {
-                        modifiedDamage *= result.damageMultiplier;
-                    }
-                }
-            });
-        }
-
-        return modifiedDamage;
     }
 };
